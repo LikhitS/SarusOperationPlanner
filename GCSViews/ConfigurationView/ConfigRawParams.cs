@@ -310,6 +310,9 @@ namespace MissionPlanner.GCSViews.ConfigurationView
             }
 
 
+            // Sarus: values the aircraft did not keep as sent (clamped, rounded or rejected)
+            var notKept = new List<string>();
+
             foreach (string value in temp)
             {
                 try
@@ -320,7 +323,19 @@ namespace MissionPlanner.GCSViews.ConfigurationView
                         return;
                     }
 
-                    MainV2.comPort.setParam(value, (double)_changes[value]);
+                    double requested = (double)_changes[value];
+                    MainV2.comPort.setParam(value, requested);
+
+                    // Sarus: compare with what the aircraft reported back
+                    double? kept = MainV2.comPort.MAV.param.ContainsKey(value)
+                        ? MainV2.comPort.MAV.param[value].Value
+                        : (double?)null;
+                    string keptWarning = null;
+                    if (kept.HasValue && !ParamValueMatches(requested, kept.Value))
+                    {
+                        keptWarning = "The aircraft kept " + kept.Value + " (you sent " + requested + ")";
+                        notKept.Add(value + ": sent " + requested + ", aircraft kept " + kept.Value);
+                    }
                     //check if reboot required
                     if (ParameterMetaDataRepository.GetParameterRebootRequired(value, MainV2.comPort.MAV.cs.firmware.ToString()))
                     {
@@ -346,7 +361,20 @@ namespace MissionPlanner.GCSViews.ConfigurationView
                         {
                             if (row.Cells[Command.Index].Value.ToString() == value)
                             {
-                                row.Cells[Value.Index].Style.BackColor = ThemeManager.ControlBGColor;
+                                var cell = row.Cells[Value.Index];
+                                if (keptWarning != null)
+                                {
+                                    // show the aircraft's actual value, not the value that was typed
+                                    Params.CellValueChanged -= Params_CellValueChanged;
+                                    cell.Value = kept.Value.ToString();
+                                    Params.CellValueChanged += Params_CellValueChanged;
+                                    SetCellWarning(cell, keptWarning);
+                                }
+                                else
+                                {
+                                    ClearCellWarning(cell);
+                                    cell.Style.BackColor = ThemeManager.ControlBGColor;
+                                }
                                 _changes.Remove(value);
                                 break;
                             }
@@ -362,6 +390,11 @@ namespace MissionPlanner.GCSViews.ConfigurationView
                     CustomMessageBox.Show("Set " + value + " Failed");
                 }
             }
+
+            if (notKept.Count > 0)
+                CustomMessageBox.Show(
+                    "The aircraft did not keep these values exactly as sent:\n\n" + string.Join("\n", notKept) +
+                    "\n\nThe table now shows the aircraft's actual values (highlighted).", "Values changed by aircraft");
 
             if (error > 0)
                 CustomMessageBox.Show("Not all parameters successfully saved.", "Saved");
@@ -451,6 +484,39 @@ namespace MissionPlanner.GCSViews.ConfigurationView
             }
         }
 
+        // Sarus: non-blocking warnings shown on a value cell (amber background, warning first in the tooltip).
+        // The cell's original tooltip (the parameter description) is kept in Tag and restored on clear.
+        private static readonly Color WarningBackColor = Color.FromArgb(0xF0, 0xA6, 0x30);
+
+        private static void SetCellWarning(DataGridViewCell cell, string warning)
+        {
+            if (!(cell.Tag is string original))
+            {
+                original = cell.ToolTipText ?? "";
+                cell.Tag = original;
+            }
+            cell.ToolTipText = "WARNING: " + warning + (original.Length > 0 ? "\n\n" + original : "");
+            cell.Style.BackColor = WarningBackColor;
+            cell.Style.ForeColor = Color.Black;
+        }
+
+        private static void ClearCellWarning(DataGridViewCell cell)
+        {
+            if (cell.Tag is string original)
+            {
+                cell.ToolTipText = original;
+                cell.Tag = null;
+            }
+            cell.Style.ForeColor = Color.Empty;
+        }
+
+        // Parameters travel as 32-bit floats; compare at that precision so only real changes are reported.
+        private static bool ParamValueMatches(double sent, double kept)
+        {
+            float a = (float)sent, b = (float)kept;
+            return Math.Abs(a - b) <= Math.Max(Math.Abs(a), 1f) * 1e-6f;
+        }
+
         private void Params_CellValueChanged(object sender, DataGridViewCellEventArgs e)
         {
             if (e.RowIndex == -1 || e.ColumnIndex == -1 || startup || e.ColumnIndex != Value.Index)
@@ -483,12 +549,13 @@ namespace MissionPlanner.GCSViews.ConfigurationView
                 if (!String.IsNullOrEmpty(readonly1))
                 {
                     var readonly2 = bool.Parse(readonly1);
-                    if (readonly2)
-                    {
+                    // Sarus: read-only parameters can be changed after an explicit confirmation
+                    if (readonly2 &&
                         CustomMessageBox.Show(
                             Params[Command.Index, e.RowIndex].Value +
-                            " is marked as ReadOnly, and will not be changed", "ReadOnly",
-                            MessageBoxButtons.OK);
+                            " is marked read-only by ArduPilot. Changing it can break calibration or be refused by the aircraft.\n\nChange it anyway?",
+                            "ReadOnly", MessageBoxButtons.YesNo) != (int)DialogResult.Yes)
+                    {
                         Params.CellValueChanged -= Params_CellValueChanged;
                         Params[e.ColumnIndex, e.RowIndex].Value = cellEditValue;
                         Params.CellValueChanged += Params_CellValueChanged;
@@ -496,26 +563,25 @@ namespace MissionPlanner.GCSViews.ConfigurationView
                     }
                 }
 
+                // Sarus: out-of-range values are accepted without a prompt and flagged on the cell instead
+                string rangeWarning = null;
                 if (ParameterMetaDataRepository.GetParameterRange(Params[Command.Index, e.RowIndex].Value.ToString(),
                     ref min, ref max, MainV2.comPort.MAV.cs.firmware.ToString()))
                 {
                     if (newvalue > max || newvalue < min)
-                    {
-                        if (
-                            CustomMessageBox.Show(
-                                Params[Command.Index, e.RowIndex].Value +
-                                " value is out of range. Do you want to continue?", "Out of range",
-                                MessageBoxButtons.YesNo) == (int)DialogResult.No)
-                        {
-                            Params.CellValueChanged -= Params_CellValueChanged;
-                            Params[e.ColumnIndex, e.RowIndex].Value = cellEditValue;
-                            Params.CellValueChanged += Params_CellValueChanged;
-                            return;
-                        }
-                    }
+                        rangeWarning = "Outside ArduPilot's recommended range " + min + " to " + max +
+                                       ". It will be written as entered; the aircraft may limit it.";
                 }
 
-                Params[e.ColumnIndex, e.RowIndex].Style.BackColor = Color.Green;
+                if (rangeWarning != null)
+                {
+                    SetCellWarning(Params[e.ColumnIndex, e.RowIndex], rangeWarning);
+                }
+                else
+                {
+                    ClearCellWarning(Params[e.ColumnIndex, e.RowIndex]);
+                    Params[e.ColumnIndex, e.RowIndex].Style.BackColor = Color.Green;
+                }
                 log.InfoFormat("Queue change {0} = {1} ({2})", Params[Command.Index, e.RowIndex].Value, Params[e.ColumnIndex, e.RowIndex].Value, newvalue);
                 _changes[Params[Command.Index, e.RowIndex].Value] = newvalue;
 
