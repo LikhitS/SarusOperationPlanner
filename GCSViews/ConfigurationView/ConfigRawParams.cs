@@ -326,10 +326,20 @@ namespace MissionPlanner.GCSViews.ConfigurationView
                     double requested = (double)_changes[value];
                     MainV2.comPort.setParam(value, requested);
 
-                    // Sarus: compare with what the aircraft reported back
+                    // Sarus: compare with what the aircraft actually holds. Ask again rather than trusting the
+                    // write acknowledgement: some values are re-limited by the firmware after it acknowledges them
+                    // (e.g. Q_LOIT_ACC_MAX_M acknowledged 9.81, running 5.66).
                     double? kept = MainV2.comPort.MAV.param.ContainsKey(value)
                         ? MainV2.comPort.MAV.param[value].Value
                         : (double?)null;
+                    try
+                    {
+                        kept = MainV2.comPort.GetParam(MainV2.comPort.MAV.sysid, MainV2.comPort.MAV.compid, value);
+                    }
+                    catch (Exception ex)
+                    {
+                        log.Warn("re-read after write failed for " + value + ": " + ex.Message);
+                    }
                     string keptWarning = null;
                     if (kept.HasValue && !ParamValueMatches(requested, kept.Value))
                     {
