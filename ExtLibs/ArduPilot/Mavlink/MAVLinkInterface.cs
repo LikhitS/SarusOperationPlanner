@@ -2298,7 +2298,6 @@ Sarus Operation Planner waits for 2 valid heartbeat packets before connecting
 
             log.Info("GetParam name: '" + name + "' or index: " + index + " " + sysid + ":" + compid);
 
-            MAVLinkMessage buffer;
             giveComport = true;
             mavlink_param_request_read_t req = new mavlink_param_request_read_t
             {
@@ -2322,79 +2321,87 @@ Sarus Operation Planner waits for 2 valid heartbeat packets before connecting
                 return 0f;
             }
 
-            DateTime start = DateTime.Now;
-            int retrys = 3;
-
-            while (true)
+            // Sarus: receive the reply through a subscription. Any thread reading the link (the main reader or
+            // another request waiting for its own reply) delivers it here; previously a concurrent reader could
+            // consume and discard this reply, making GetParam time out although the vehicle had answered.
+            bool complete = false;
+            float result = 0;
+            var sub = SubscribeToPacketType(MAVLINK_MSG_ID.PARAM_VALUE, message =>
             {
-                if (!(start.AddMilliseconds(700) > DateTime.Now))
-                {
-                    if (retrys > 0)
-                    {
-                        log.Info("GetParam Retry " + retrys);
-                        generatePacket((byte) MAVLINK_MSG_ID.PARAM_REQUEST_READ, req, sysid, compid);
-                        start = DateTime.Now;
-                        retrys--;
-                        continue;
-                    }
+                if (complete)
+                    return true;
 
-                    giveComport = false;
-                    throw new TimeoutException("Timeout on read - GetParam");
+                mavlink_param_value_t par = message.ToStructure<mavlink_param_value_t>();
+
+                string st = Encoding.UTF8.GetString(par.param_id);
+
+                int pos = st.IndexOf('\0');
+
+                if (pos != -1)
+                {
+                    st = st.Substring(0, pos);
                 }
 
-                buffer = await readPacketAsync().ConfigureAwait(false);
-                if (buffer.Length > 5)
+                // not the correct id
+                if (!(par.param_index == index || st == name))
+                    return true;
+
+                // update table
+                if (MAVlist[sysid, compid].apname == MAV_AUTOPILOT.ARDUPILOTMEGA)
                 {
-                    if (buffer.msgid == (byte) MAVLINK_MSG_ID.PARAM_VALUE && buffer.sysid == sysid &&
-                        buffer.compid == req.target_component)
+                    MAVlist[sysid, compid].param[st] = new MAVLinkParam(st,
+                        BitConverter.GetBytes(par.param_value), MAV_PARAM_TYPE.REAL32,
+                        (MAV_PARAM_TYPE) par.param_type);
+                }
+                else
+                {
+                    MAVlist[sysid, compid].param[st] = new MAVLinkParam(st,
+                        BitConverter.GetBytes(par.param_value), (MAV_PARAM_TYPE) par.param_type,
+                        (MAV_PARAM_TYPE) par.param_type);
+                }
+
+                lock(MAVlist[sysid, compid].param_types)
+                    MAVlist[sysid, compid].param_types[st] = (MAV_PARAM_TYPE) par.param_type;
+
+                log.Info(DateTime.Now.Millisecond + " got param " + (par.param_index) + " of " +
+                         (par.param_count) + " name: " + st);
+
+                result = par.param_value;
+                complete = true;
+                return true;
+            }, sysid, compid);
+
+            try
+            {
+                DateTime start = DateTime.Now;
+                int retrys = 3;
+
+                while (true)
+                {
+                    if (complete)
+                        return result;
+
+                    if (!(start.AddMilliseconds(700) > DateTime.Now))
                     {
-                        mavlink_param_value_t par = buffer.ToStructure<mavlink_param_value_t>();
-
-                        string st = Encoding.UTF8.GetString(par.param_id);
-
-                        int pos = st.IndexOf('\0');
-
-                        if (pos != -1)
+                        if (retrys > 0)
                         {
-                            st = st.Substring(0, pos);
-                        }
-
-                        // not the correct id
-                        if (!(par.param_index == index || st == name))
-                        {
-                            log.ErrorFormat("Wrong Answer {0} - {1} - {2}    --- '{3}' vs '{4}'", par.param_index,
-                                Encoding.UTF8.GetString(par.param_id), par.param_value,
-                                Encoding.UTF8.GetString(req.param_id).TrimEnd(), st);
+                            log.Info("GetParam Retry " + retrys);
+                            generatePacket((byte) MAVLINK_MSG_ID.PARAM_REQUEST_READ, req, sysid, compid);
+                            start = DateTime.Now;
+                            retrys--;
                             continue;
                         }
 
-                        // update table
-                        if (MAVlist[sysid, compid].apname == MAV_AUTOPILOT.ARDUPILOTMEGA)
-                        {
-                            var offset = Marshal.OffsetOf(typeof(mavlink_param_value_t), "param_value");
-                            MAVlist[sysid, compid].param[st] = new MAVLinkParam(st,
-                                BitConverter.GetBytes(par.param_value), MAV_PARAM_TYPE.REAL32,
-                                (MAV_PARAM_TYPE) par.param_type);
-                        }
-                        else
-                        {
-                            var offset = Marshal.OffsetOf(typeof(mavlink_param_value_t), "param_value");
-                            MAVlist[sysid, compid].param[st] = new MAVLinkParam(st,
-                                BitConverter.GetBytes(par.param_value), (MAV_PARAM_TYPE) par.param_type,
-                                (MAV_PARAM_TYPE) par.param_type);
-                        }
-
-                        lock(MAVlist[sysid, compid].param_types)
-                            MAVlist[sysid, compid].param_types[st] = (MAV_PARAM_TYPE) par.param_type;
-
-                        log.Info(DateTime.Now.Millisecond + " got param " + (par.param_index) + " of " +
-                                 (par.param_count) + " name: " + st);
-
-                        giveComport = false;
-
-                        return par.param_value;
+                        throw new TimeoutException("Timeout on read - GetParam");
                     }
+
+                    await readPacketAsync().ConfigureAwait(false);
                 }
+            }
+            finally
+            {
+                giveComport = false;
+                UnSubscribeToPacketType(sub);
             }
         }
 
@@ -2689,7 +2696,6 @@ Sarus Operation Planner waits for 2 valid heartbeat packets before connecting
             if (BaseStream == null || BaseStream.IsOpen == false)
                 return false;
 
-            MAVLinkMessage buffer;
 
             mavlink_command_long_t req = new mavlink_command_long_t
             {
@@ -2769,67 +2775,65 @@ Sarus Operation Planner waits for 2 valid heartbeat packets before connecting
                 return true;
             }
 
-            while (true)
+            // Sarus: receive the acknowledgement through a subscription. Any thread reading the link delivers it here;
+            // previously a concurrent reader (e.g. another request waiting for its own reply) could consume and
+            // discard this ACK, so an accepted command was reported as a timeout.
+            var acks = new System.Collections.Concurrent.ConcurrentQueue<mavlink_command_ack_t>();
+            var ackSub = SubscribeToPacketType(MAVLINK_MSG_ID.COMMAND_ACK, message =>
             {
-                if (DateTime.Now > GUI.AddMilliseconds(100))
-                {
-                    GUI = DateTime.Now;
+                var a = message.ToStructure<mavlink_command_ack_t>();
+                if (a.command == req.command)
+                    acks.Enqueue(a);
+                return true;
+            }, sysid, req.target_component);
 
-                    uicallback?.Invoke();
-                }
-
-                if (!(start.AddMilliseconds(timeout) > DateTime.Now))
+            try
+            {
+                while (true)
                 {
-                    if (retrys > 0)
+                    if (DateTime.Now > GUI.AddMilliseconds(100))
                     {
-                        log.Info("doCommand Retry " + retrys);
-                        req.confirmation++;
-                        generatePacket((byte) MAVLINK_MSG_ID.COMMAND_LONG, req, sysid, compid);
-                        start = DateTime.Now;
-                        retrys--;
-                        continue;
+                        GUI = DateTime.Now;
+
+                        uicallback?.Invoke();
                     }
 
-                    giveComport = false;
-                    throw new TimeoutException("Timeout on read - doCommand");
-                }
-
-                buffer = await readPacketAsync().ConfigureAwait(false);
-                if (buffer.Length > 5)
-                {
-                    if (buffer.msgid == (byte) MAVLINK_MSG_ID.COMMAND_ACK && buffer.sysid == sysid &&
-                        buffer.compid == req.target_component)
+                    if (acks.TryDequeue(out var ack))
                     {
-                        var ack = buffer.ToStructure<mavlink_command_ack_t>();
-
-                        if (ack.command != req.command)
-                        {
-                            log.InfoFormat("doCommand cmd resp {0} - {1} - Commands dont match", (MAV_CMD) ack.command,
-                                (MAV_RESULT) ack.result);
-                            continue;
-                        }
-
                         log.InfoFormat("doCommand cmd resp {0} - {1}", (MAV_CMD) ack.command, (MAV_RESULT) ack.result);
-
 
                         if (ack.result == (byte)MAV_RESULT.IN_PROGRESS)
                         {
                             start = DateTime.Now;
                             retrys = 0;
                             continue;
-                        } 
-                        else if (ack.result == (byte) MAV_RESULT.ACCEPTED)
-                        {
-                            giveComport = false;
-                            return true;
                         }
-                        else
-                        {
-                            giveComport = false;
-                            return false;
-                        }
+
+                        return ack.result == (byte) MAV_RESULT.ACCEPTED;
                     }
+
+                    if (!(start.AddMilliseconds(timeout) > DateTime.Now))
+                    {
+                        if (retrys > 0)
+                        {
+                            log.Info("doCommand Retry " + retrys);
+                            req.confirmation++;
+                            generatePacket((byte) MAVLINK_MSG_ID.COMMAND_LONG, req, sysid, compid);
+                            start = DateTime.Now;
+                            retrys--;
+                            continue;
+                        }
+
+                        throw new TimeoutException("Timeout on read - doCommand");
+                    }
+
+                    await readPacketAsync().ConfigureAwait(false);
                 }
+            }
+            finally
+            {
+                giveComport = false;
+                UnSubscribeToPacketType(ackSub);
             }
         }
 
