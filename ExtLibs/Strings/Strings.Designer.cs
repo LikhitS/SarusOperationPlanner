@@ -1184,7 +1184,7 @@ namespace MissionPlanner {
         
         /// <summary>
         ///   Looks up a localized string similar to Only 1 Mavlink Heartbeat Packets was read from this port - Verify your hardware is setup correctly
-        ///Mission Planner waits for 2 valid heartbeat packets before connecting.
+        ///Sarus Operation Planner waits for 2 valid heartbeat packets before connecting.
         /// </summary>
         public static string Only1HbD {
             get {
@@ -1249,7 +1249,7 @@ namespace MissionPlanner {
         
         /// <summary>
         ///   Looks up a localized string similar to Please unplug the board, and then press OK and plug back in.
-        ///Mission Planner will look for 30 seconds to find the board.
+        ///Sarus Operation Planner will look for 30 seconds to find the board.
         /// </summary>
         public static string PleaseUnplugTheBoardAnd {
             get {
@@ -1476,7 +1476,7 @@ namespace MissionPlanner {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to This board has been retired, Mission Planner this will upload the last available version to your board (AC 3.2.1/AP 3.4.0).
+        ///   Looks up a localized string similar to This board has been retired, Sarus Operation Planner this will upload the last available version to your board (AC 3.2.1/AP 3.4.0).
         /// </summary>
         public static string ThisBoardHasBeenRetired {
             get {

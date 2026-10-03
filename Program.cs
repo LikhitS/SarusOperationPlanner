@@ -204,7 +204,7 @@ namespace MissionPlanner
                 return;
             }
 
-            name = "Mission Planner";
+            name = "Sarus Operation Planner";
 
             try
             {

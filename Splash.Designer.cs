@@ -40,13 +40,13 @@
             this.label1.AutoSize = true;
             this.label1.BackColor = System.Drawing.Color.Transparent;
             this.label1.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
-            this.label1.ForeColor = System.Drawing.Color.OliveDrab;
+            this.label1.ForeColor = System.Drawing.Color.FromArgb(((int)(((byte)(58)))), ((int)(((byte)(159)))), ((int)(((byte)(224)))));
             this.label1.Location = new System.Drawing.Point(447, 132);
             this.label1.Name = "label1";
             this.label1.Size = new System.Drawing.Size(113, 13);
             this.label1.TabIndex = 0;
             this.label1.Tag = "custom";
-            this.label1.Text = "by Michael Oborne";
+            this.label1.Text = "by Sarus Aerospace";
             this.label1.TextAlign = System.Drawing.ContentAlignment.TopRight;
             // 
             // TXT_version
@@ -88,7 +88,7 @@
             this.MinimumSize = new System.Drawing.Size(600, 375);
             this.Name = "Splash";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
-            this.Text = "Mission Planner";
+            this.Text = "Sarus Operation Planner";
             this.TopMost = true;
             ((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).EndInit();
             this.ResumeLayout(false);

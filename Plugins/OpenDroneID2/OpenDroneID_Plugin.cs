@@ -73,7 +73,7 @@ namespace OpenDroneID_Plugin
             // setup default if doesnt exist
             if (tabs == null)
             {
-                CustomMessageBox.Show("Restart Mission Planner to enable Drone ID Tab. Disable Plugin if Not Required CTRL-P");
+                CustomMessageBox.Show("Restart Sarus Operation Planner to enable Drone ID Tab. Disable Plugin if Not Required CTRL-P");
                 Host.MainForm.FlightData.saveTabControlActions();
                 tabs = Settings.Instance["tabcontrolactions"];
                 Settings.Instance.Save();

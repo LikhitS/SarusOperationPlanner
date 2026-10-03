@@ -808,7 +808,7 @@ namespace MissionPlanner
                             throw new TimeoutException(@"Can not establish a connection
 
 No Mavlink Heartbeat Packets where read from this port - Verify Baud Rate and setup
-Mission Planner waits for 2 valid heartbeat packets before connecting
+Sarus Operation Planner waits for 2 valid heartbeat packets before connecting
 " + plaintxtlinebuffer.Aggregate((a, b) => a + "\r\n" + b));
                         }
                     }
@@ -905,7 +905,7 @@ Mission Planner waits for 2 valid heartbeat packets before connecting
 
                 countDown.Stop();
 
-                char[] temp = ("Mission Planner " + getAppVersion() + "\0").ToCharArray();
+                char[] temp = ("Sarus Operation Planner " + getAppVersion() + "\0").ToCharArray();
                 Array.Resize(ref temp, 50);
 
                 //

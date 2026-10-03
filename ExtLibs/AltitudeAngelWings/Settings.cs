@@ -162,13 +162,13 @@ namespace AltitudeAngelWings
 
         public string FlightPlanName
         {
-            get => Get(nameof(FlightPlanName), "Mission Planner", s => s);
+            get => Get(nameof(FlightPlanName), "Sarus Operation Planner", s => s);
             set => Set(nameof(FlightPlanName), value);
         }
 
         public string FlightPlanDescription
         {
-            get => Get(nameof(FlightPlanDescription), "Mission Planner flight plan", s => s);
+            get => Get(nameof(FlightPlanDescription), "Sarus Operation Planner flight plan", s => s);
             set => Set(nameof(FlightPlanDescription), value);
         }
 

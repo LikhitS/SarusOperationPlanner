@@ -307,7 +307,7 @@
     <value>somente 1 verificação recebida</value>
   </data>
   <data name="Only1HbD" xml:space="preserve">
-    <value>Somente um pacote de status do Mavlink foi recebido nessa porta – verifique se o hardware foi configurado corretamente Mission Planner espera 2 mensagens de status antes de conectar.</value>
+    <value>Somente um pacote de status do Mavlink foi recebido nessa porta – verifique se o hardware foi configurado corretamente Sarus Operation Planner espera 2 mensagens de status antes de conectar.</value>
   </data>
   <data name="Trying" xml:space="preserve">
     <value>Tentando conectar. tempo restante {0}</value>
@@ -490,7 +490,7 @@
     <value>Desconecte a placa, pressione OK e conecte de novo. Mission Planer vai tentar conectar por 30 seg</value>
   </data>
   <data name="ThisBoardHasBeenRetired" xml:space="preserve">
-    <value>Esse board foi aposentado, Mission Planner vai carregar a ultima versão disponível para a placa</value>
+    <value>Esse board foi aposentado, Sarus Operation Planner vai carregar a ultima versão disponível para a placa</value>
   </data>
   <data name="YouAreUsingUnsupportedHardware" xml:space="preserve">
     <value>Hardware não suportado. Essa placa não contem um certificado de autenticação valido. Contate seu vendedor de hardware para ele validar a placa.</value>

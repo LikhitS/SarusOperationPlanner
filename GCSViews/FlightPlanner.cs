@@ -5907,7 +5907,7 @@ namespace MissionPlanner.GCSViews
                     {
                         StreamWriter sw = new StreamWriter(sf.OpenFile());
 
-                        sw.WriteLine("#saved by Mission Planner " + Application.ProductVersion);
+                        sw.WriteLine("#saved by Sarus Operation Planner " + Application.ProductVersion);
 
                         if (drawnpolygon.Points.Count > 0)
                         {
@@ -6043,7 +6043,7 @@ Column 1: Field type (RALLY is the only one at the moment -- may have RALLY_LAND
                     {
                         using (StreamWriter sw = new StreamWriter(sf.OpenFile()))
                         {
-                            sw.WriteLine("#saved by Mission Planner " + Application.ProductVersion);
+                            sw.WriteLine("#saved by Sarus Operation Planner " + Application.ProductVersion);
 
 
                             foreach (GMapMarkerRallyPt mark in rallypointoverlay.Markers)

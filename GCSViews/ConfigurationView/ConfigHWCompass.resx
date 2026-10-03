@@ -829,7 +829,7 @@
     <value>10</value>
   </data>
   <data name="groupBoxmpcalib.Text" xml:space="preserve">
-    <value>Mission Planner Mag Calibration</value>
+    <value>Sarus Operation Planner Mag Calibration</value>
   </data>
   <data name="&gt;&gt;groupBoxmpcalib.Name" xml:space="preserve">
     <value>groupBoxmpcalib</value>

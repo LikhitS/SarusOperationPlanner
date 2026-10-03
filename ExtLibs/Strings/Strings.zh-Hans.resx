@@ -320,7 +320,7 @@
   </data>
   <data name="Only1HbD" xml:space="preserve">
     <value>Only 1 Mavlink Heartbeat Packets was read from this port - Verify your hardware is setup correctly
-Mission Planner waits for 2 valid heartbeat packets before connecting</value>
+Sarus Operation Planner waits for 2 valid heartbeat packets before connecting</value>
   </data>
   <data name="Trying" xml:space="preserve">
     <value>尝试连接。
@@ -512,10 +512,10 @@ Mission Planner waits for 2 valid heartbeat packets before connecting</value>
   </data>
   <data name="PleaseUnplugTheBoardAnd" xml:space="preserve">
     <value>请拔下控制板，点击OK后再插入。
-Mission Planner将会在30秒内寻找控制板。</value>
+Sarus Operation Planner将会在30秒内寻找控制板。</value>
   </data>
   <data name="ThisBoardHasBeenRetired" xml:space="preserve">
-    <value>此控制板已经退出历史舞台了，Mission Planner将会上传最后一个支持的版本到您控制板。</value>
+    <value>此控制板已经退出历史舞台了，Sarus Operation Planner将会上传最后一个支持的版本到您控制板。</value>
   </data>
   <data name="YouAreUsingUnsupportedHardware" xml:space="preserve">
     <value>您正在使用不受支持的硬件。

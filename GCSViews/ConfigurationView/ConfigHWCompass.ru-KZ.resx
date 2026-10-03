@@ -199,7 +199,7 @@
     <value>Перв. компас:</value>
   </data>
   <data name="groupBoxmpcalib.Text" xml:space="preserve">
-    <value>Mission Planner кол. компаса</value>
+    <value>Sarus Operation Planner кол. компаса</value>
   </data>
   <data name="groupBoxGeneralSettings.Text" xml:space="preserve">
     <value>Общие настройки компаса</value>

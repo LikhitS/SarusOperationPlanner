@@ -118,7 +118,7 @@ namespace AltitudeAngelWings.Plugin.Properties {
         /// <summary>
         ///   Looks up a localized string similar to Do you wish to enable the Altitude Angel plugin?
         ///
-        ///Clicking &quot;Yes&quot; will provide you with Altitude Angel&apos;s airspace and ground hazard data directly on the Mission Planner maps,
+        ///Clicking &quot;Yes&quot; will provide you with Altitude Angel&apos;s airspace and ground hazard data directly on the Sarus Operation Planner maps,
         ///making it easier to discover where you can and cannot fly, and plan for safer flights. You will be asked to login with your
         ///Altitude Angel account, or register for a new account if you don&apos;t have one.
         ///

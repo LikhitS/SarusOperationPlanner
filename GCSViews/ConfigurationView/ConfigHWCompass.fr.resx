@@ -169,7 +169,7 @@
     <value>Calibration boussole embarquée</value>
   </data>
   <data name="groupBoxmpcalib.Text" xml:space="preserve">
-    <value>Calibration boussole Mission Planner</value>
+    <value>Calibration boussole Sarus Operation Planner</value>
   </data>
   <data name="label4.Text" xml:space="preserve">
     <value>OU</value>

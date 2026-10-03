@@ -323,7 +323,7 @@ Please upgrade</value>
   </data>
   <data name="Only1HbD" xml:space="preserve">
     <value>Only 1 Mavlink Heartbeat Packets was read from this port - Verify your hardware is setup correctly
-Mission Planner waits for 2 valid heartbeat packets before connecting</value>
+Sarus Operation Planner waits for 2 valid heartbeat packets before connecting</value>
   </data>
   <data name="Trying" xml:space="preserve">
     <value>Trying to connect.
@@ -551,10 +551,10 @@ Please use Standard/Advanced Params for the safe settings</value>
   </data>
   <data name="PleaseUnplugTheBoardAnd" xml:space="preserve">
     <value>Please unplug the board, and then press OK and plug back in.
-Mission Planner will look for 30 seconds to find the board</value>
+Sarus Operation Planner will look for 30 seconds to find the board</value>
   </data>
   <data name="ThisBoardHasBeenRetired" xml:space="preserve">
-    <value>This board has been retired, Mission Planner this will upload the last available version to your board (AC 3.2.1/AP 3.4.0)</value>
+    <value>This board has been retired, Sarus Operation Planner this will upload the last available version to your board (AC 3.2.1/AP 3.4.0)</value>
   </data>
   <data name="YouAreUsingUnsupportedHardware" xml:space="preserve">
     <value>You are using unsupported hardware.

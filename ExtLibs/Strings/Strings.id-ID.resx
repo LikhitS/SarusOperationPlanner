@@ -542,7 +542,7 @@ Please use Standard/Advanced Params for the safe settings</value>
     <value>Silahkan cabut papan, kemudian tekan OK dan pasang kembali. Misi Planner akan mencari 30 detik untuk menemukan papan</value>
   </data>
   <data name="ThisBoardHasBeenRetired" xml:space="preserve">
-    <value>This board has been retired, Mission Planner this will upload the last available version to your board</value>
+    <value>This board has been retired, Sarus Operation Planner this will upload the last available version to your board</value>
   </data>
   <data name="YouAreUsingUnsupportedHardware" xml:space="preserve">
     <value>You are using unsupported hardware.

@@ -376,7 +376,7 @@ namespace MissionPlanner.Log
                     Path.GetFileNameWithoutExtension(filename) + ".gpx", Encoding.ASCII);
 
             xw.WriteStartElement("gpx");
-            xw.WriteAttributeString("creator", "Mission Planner");
+            xw.WriteAttributeString("creator", "Sarus Operation Planner");
             xw.WriteAttributeString("xmlns", "http://www.topografix.com/GPX/1/1");
 
             xw.WriteStartElement("trk");
