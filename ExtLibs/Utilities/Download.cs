@@ -676,11 +676,14 @@ namespace MissionPlanner.Utilities
                 if (fileSizeCache.ContainsKey(uri) && fileSizeCache[uri] > 0)
                     return fileSizeCache[uri];
 
-                var responce = client.GetAsync(uri);
-                var len = responce.GetAwaiter().GetResult().Content.Headers.ContentLength();
-                fileSizeCache[uri] = len;
-                responce.Result.Dispose();
-                return len;
+                // Sarus: read headers only. Without ResponseHeadersRead the whole file is downloaded just to
+                // learn its size (the updater's zip path calls this for the full release zip).
+                using (var response = client.GetAsync(uri, HttpCompletionOption.ResponseHeadersRead).GetAwaiter().GetResult())
+                {
+                    var len = response.Content.Headers.ContentLength();
+                    fileSizeCache[uri] = len;
+                    return len;
+                }
             }
         }
 

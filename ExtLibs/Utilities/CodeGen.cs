@@ -36,7 +36,10 @@ namespace MissionPlanner
             lasterror = "";
             var filecontents = File.ReadAllText(filepath, Encoding.UTF8);
             {
-                var bytes = filecontents.Select(a => (byte) a).ToArray();
+                // Sarus: key the cache on the host build as well as the source, so an upgraded app never loads
+                // a plugin compiled against an older version (fails with MissingMethodException at runtime)
+                var hostBuild = (Assembly.GetEntryAssembly() ?? typeof(CodeGenRoslyn).Assembly).ManifestModule.ModuleVersionId;
+                var bytes = filecontents.Select(a => (byte) a).Concat(hostBuild.ToByteArray()).ToArray();
                 var md5 = new MD5Digest();
                 md5.BlockUpdate(bytes, 0, bytes.Length);
                 var result = new byte[md5.GetDigestSize()];

@@ -142,6 +142,15 @@ namespace MissionPlanner.Utilities
                 log.Debug("Response status: " + response.StatusCode);
                 // Get the stream containing content returned by the server.
 
+                // Sarus: an error page (e.g. 404 before the first release exists) is not a version number
+                if (!response.IsSuccessStatusCode)
+                {
+                    log.Info("Update check failed: " + (int)response.StatusCode + " " + response.ReasonPhrase);
+                    if (NotifyNoUpdate)
+                        CustomMessageBox.Show(Strings.UpdateNotFound);
+                    return;
+                }
+
                 if (File.Exists(path))
                 {
                     var fi = new FileInfo(path);
@@ -162,7 +171,14 @@ namespace MissionPlanner.Utilities
 
                     using (StreamReader sr = new StreamReader(response.Content.ReadAsStreamAsync().GetAwaiter().GetResult()))
                     {
-                        WebVersion = new Version(sr.ReadLine());
+                        var line = sr.ReadLine();
+                        if (!Version.TryParse(line?.Trim(), out WebVersion))
+                        {
+                            log.Info("Update check: server did not return a version number");
+                            if (NotifyNoUpdate)
+                                CustomMessageBox.Show(Strings.UpdateNotFound);
+                            return;
+                        }
                     }
 
                     log.Info("New file Check: local " + LocalVersion + " vs Remote " + WebVersion);
