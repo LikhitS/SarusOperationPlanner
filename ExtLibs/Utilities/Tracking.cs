@@ -38,7 +38,8 @@ namespace MissionPlanner.Utilities
 
         }
 
-        public static bool OptOut = false;
+        // Sarus: usage analytics are off unless the user opts in (the tracking id belongs to upstream Mission Planner)
+        public static bool OptOut = true;
 
         static string version = "1";
         static string tid = "UA-43098846-1";

@@ -716,7 +716,7 @@ namespace MissionPlanner
                 if (File.Exists($"{running_directory}custom.mpsystheme"))
                     Settings.Instance["theme"] = "custom.mpsystheme";
                 else
-                    Settings.Instance["theme"] = "BurntKermit.mpsystheme";
+                    Settings.Instance["theme"] = "SarusDark.mpsystheme";
             }
 
             ThemeManager.LoadTheme(Settings.Instance["theme"]);
@@ -1007,8 +1007,10 @@ namespace MissionPlanner
                 if (Settings.Instance["speechenable"] != null)
                     MainV2.speechEnable = Settings.Instance.GetBoolean("speechenable");
 
-                if (Settings.Instance["analyticsoptout"] != null)
-                    MissionPlanner.Utilities.Tracking.OptOut = Settings.Instance.GetBoolean("analyticsoptout");
+                // Sarus: default to opted out, and store it so the Config > Planner checkbox shows the real state
+                if (Settings.Instance["analyticsoptout"] == null)
+                    Settings.Instance["analyticsoptout"] = true.ToString();
+                MissionPlanner.Utilities.Tracking.OptOut = Settings.Instance.GetBoolean("analyticsoptout");
 
                 try
                 {
@@ -3653,11 +3655,11 @@ namespace MissionPlanner
 
                 // invalidate update url
                 System.Configuration.ConfigurationManager.AppSettings["UpdateLocationVersion"] =
-                    "https://firmware.ardupilot.org/MissionPlanner/xp/";
+                    "";
                 System.Configuration.ConfigurationManager.AppSettings["UpdateLocation"] =
-                    "https://firmware.ardupilot.org/MissionPlanner/xp/";
+                    "";
                 System.Configuration.ConfigurationManager.AppSettings["UpdateLocationMD5"] =
-                    "https://firmware.ardupilot.org/MissionPlanner/xp/checksums.txt";
+                    "";
                 System.Configuration.ConfigurationManager.AppSettings["BetaUpdateLocationVersion"] = "";
             }
 
@@ -4686,11 +4688,11 @@ namespace MissionPlanner
         {
             try
             {
-                System.Diagnostics.Process.Start("https://ardupilot.org/?utm_source=Menu&utm_campaign=MP");
+                System.Diagnostics.Process.Start("https://www.sarusaerospace.in/");
             }
             catch
             {
-                CustomMessageBox.Show("Failed to open url https://ardupilot.org");
+                CustomMessageBox.Show("Failed to open url https://www.sarusaerospace.in/");
             }
         }
 
