@@ -1,0 +1,91 @@
+name: Sarus build and release
+
+# Builds Sarus Operation Planner on every push to the sarus branch (artifacts only) and publishes a GitHub
+# Release when a tag v* is pushed. The release assets are exactly what the in-app updater downloads
+# (version.txt, checksums.txt, SarusOperationPlanner.zip, ChangeLog.txt) plus the MSI installer.
+on:
+  push:
+    branches: [sarus]
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+          fetch-depth: 1
+
+      - name: Build (Release)
+        shell: pwsh
+        run: |
+          $msb = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -requires Microsoft.Component.MSBuild -find MSBuild\Current\Bin\amd64\MSBuild.exe | Select-Object -First 1
+          & $msb -v:m -restore -t:Build -p:Configuration=Release MissionPlanner.sln
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Unit tests
+        shell: pwsh
+        # BoardDetect tests need interactive answers and getFilefromNetTest depends on google.com headers;
+        # both fail identically on upstream and are excluded here.
+        run: |
+          dotnet test MissionPlannerTests/MissionPlannerTests.csproj -c Release --filter "FullyQualifiedName!~BoardDetectTests&FullyQualifiedName!~getFilefromNetTest" --logger "trx;LogFileName=unit.trx"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Stage application
+        shell: pwsh
+        run: |
+          $src = "bin\Release\net461"
+          # upstream: drop plugin dlls that also exist at the top level
+          Get-ChildItem "$src\plugins" | ForEach-Object { if (Test-Path "$src\$($_.Name)" -PathType Leaf) { Remove-Item $_.FullName } }
+          robocopy $src stage\SarusOperationPlanner /E /XF config.xml *.tlog *.rlog /XD logs gmapcache srtm /NFL /NDL /NJH /NJS
+          if ($LASTEXITCODE -ge 8) { exit $LASTEXITCODE }
+          exit 0
+
+      - name: Update package (zip, checksums, version)
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force out | Out-Null
+          Copy-Item stage\SarusOperationPlanner\version.txt out\version.txt
+          # zip with forward-slash entry names: the updater looks entries up by "dir/file" (ZipArchive.GetEntry)
+          python -c "import zipfile,os; s=r'stage\SarusOperationPlanner'; z=zipfile.ZipFile(r'out\SarusOperationPlanner.zip','w',zipfile.ZIP_DEFLATED,compresslevel=6); [z.write(os.path.join(r,f), os.path.relpath(os.path.join(r,f), s).replace(os.sep,'/')) for r,_,fs in os.walk(s) for f in fs]; z.close()"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          # same "md5  dir/file" format the updater parses (see Utilities/Update.cs CheckMD5)
+          Push-Location stage
+          & ..\bin\Release\md5sum.exe SarusOperationPlanner > ..\out\checksums.txt
+          Pop-Location
+          if (-not (Test-Path ChangeLog.txt)) { "See https://github.com/${{ github.repository }}/releases" | Set-Content ChangeLog.txt }
+          Copy-Item ChangeLog.txt out\ChangeLog.txt
+
+      - name: Installer (WiX 3.14)
+        shell: pwsh
+        run: |
+          Invoke-WebRequest https://github.com/wixtoolset/wix3/releases/download/wix3141rtm/wix314-binaries.zip -OutFile $env:RUNNER_TEMP\wix.zip
+          if ((Get-Item $env:RUNNER_TEMP\wix.zip).Length -ne 41297555) { throw "unexpected WiX download size" }
+          Expand-Archive $env:RUNNER_TEMP\wix.zip $env:RUNNER_TEMP\wix
+          $w = "$env:RUNNER_TEMP\wix"
+          Push-Location Msi
+          & .\net472\wix.exe "$env:GITHUB_WORKSPACE\stage\SarusOperationPlanner" SarusOperationPlanner
+          $ext = @('-ext','WiXNetFxExtension','-ext','WixDifxAppExtension','-ext','WixUIExtension.dll','-ext','WixUtilExtension','-ext','WixIisExtension')
+          & "$w\candle.exe" -nologo installer.wxs @ext
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $ver = (Get-Item "$env:GITHUB_WORKSPACE\stage\SarusOperationPlanner\MissionPlanner.exe").VersionInfo.FileVersion
+          & "$w\light.exe" -nologo installer.wixobj "$w\difxapp_x86.wixlib" -sval -o "..\out\SarusOperationPlanner-$ver.msi" @ext
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          Pop-Location
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: SarusOperationPlanner
+          path: out\*
+
+      - name: Publish release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: out/*
+          prerelease: ${{ contains(github.ref_name, '-') }}
