@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Sarus Operation Planner 1.0.0 - Project Report</title>
+<link rel="stylesheet" href="sarus-print.css">
+<style>@page { @top-left { content: "Sarus Operation Planner · Project Report"; font: 600 8pt "Barlow Semi Condensed", sans-serif; letter-spacing: .08em; text-transform: uppercase; color: #566472; }
+ @bottom-left { content: "Version 1.0.0 · October 2026 · Internal"; font: 8pt "Source Sans 3", sans-serif; color: #566472; } }</style>
+</head>
+<body>
+
+<div class="cover">
+  <div class="top">
+    <img src="logo.svg" alt="Sarus Aerospace logo">
+    <div class="co">Sarus Aerospace<small>Private Limited · India</small></div>
+  </div>
+  <div class="mid">
+    <div class="kind">Project report</div>
+    <h1>Sarus Operation Planner 1.0.0</h1>
+    <p class="sub">What we built, how we built it, what is different from ArduPilot Mission Planner, how we tested it, and what it gives Sarus.</p>
+    <div class="rule"></div>
+  </div>
+  <dl class="meta">
+    <div><dt>Product</dt><dd>Ground control station</dd></div>
+    <div><dt>Version</dt><dd>1.0.0 (Windows)</dd></div>
+    <div><dt>Date</dt><dd>4 October 2026</dd></div>
+    <div><dt>Status</dt><dd>Release candidate</dd></div>
+  </dl>
+</div>
+
+<section class="chapter" id="s1">
+  <h2><span class="n">01</span>Summary</h2>
+  <p class="lead">Sarus Operation Planner is the Windows program our pilots use to set up, plan, fly and review ArduPilot aircraft. We built it from ArduPilot Mission Planner 1.3.83 and left every screen, button, feature and keyboard shortcut where Mission Planner has it.</p>
+  <p>Four things changed. The program now carries the Sarus name, logo, colours and installer, and it sits next to an existing Mission Planner installation without touching it. Parameter editing no longer stands in the way of tuning: a value outside ArduPilot's recommended range turns amber instead of being refused, and after each write the program asks the aircraft what it actually kept. We also found a fault, inherited from Mission Planner, that let replies from the aircraft go missing when two requests were waiting at once. That is fixed. Finally, every change is now compiled, tested, packaged and test-installed by GitHub's cloud machines, with no manual steps.</p>
+  <p>Alongside the program, Sarus now has its own firmware line: an ArduPilot 4.7.1 fork that identifies itself as Sarus and is built automatically for seven flight-controller families.</p>
+  <div class="kpis">
+    <div class="kpi"><b>0</b><span>changes to Mission Planner's shortcuts, screens, menus and controls</span></div>
+    <div class="kpi"><b>0 / 3,298</b><span>aircraft replies lost under stress after the fix (before: 13 of 105)</span></div>
+    <div class="kpi"><b>98</b><span>VTOL missions flown back to back in a 4-hour simulator run, no failures</span></div>
+    <div class="kpi"><b>~3,070</b><span>parameters written, read back and restored on QuadPlane, Copter and Rover</span></div>
+  </div>
+  <div class="callout warn"><strong class="t">Before real flights</strong>
+    <p>So far every flight has been in ArduPilot's official simulator. The Field Test Checklist, done with a real aircraft on the bench and then in a first flight, has to be completed before the program controls a Sarus aircraft.</p>
+  </div>
+</section>
+
+<section class="chapter" id="s2">
+  <h2><span class="n">02</span>The basics</h2>
+  <p>Readers new to drone software may find this chapter useful. Abbreviations are explained in chapter 10.</p>
+
+  <h3>Three parts of one system</h3>
+  <p>An ArduPilot drone has three software-related parts. On the aircraft sits the <b>flight controller</b>, a small computer that reads gyroscopes, accelerometers, compass, GPS, barometer and airspeed hundreds of times a second and drives the motors and control surfaces. It runs the <b>firmware</b>, which decides how the aircraft flies: stabilisation, flight modes, missions, failsafes. Roughly 1,000 to 1,500 settings, called parameters, adjust that behaviour. On the ground, the <b>ground control station</b> shows what the aircraft is doing and lets the operator plan missions, change parameters, calibrate sensors, install firmware and download logs. Sarus Operation Planner is that ground station; ArduPilot, and now the Sarus fork of it, is the firmware; the flight controllers are off-the-shelf Pixhawk-class boards.</p>
+
+  <figure class="diagram">
+    <svg viewBox="0 0 760 250" xmlns="http://www.w3.org/2000/svg" font-family="Source Sans 3, Segoe UI, sans-serif" font-size="13">
+      <defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#14202B"/></marker></defs>
+      <rect x="10" y="40" width="210" height="150" fill="#F3F5F7" stroke="#14202B"/>
+      <text x="115" y="64" text-anchor="middle" font-weight="700" font-size="14" fill="#0E1620">AIRCRAFT</text>
+      <rect x="28" y="78" width="174" height="44" fill="#fff" stroke="#566472"/><text x="115" y="97" text-anchor="middle" font-weight="600">Flight controller</text><text x="115" y="113" text-anchor="middle" fill="#566472" font-size="11.5">ArduPilot firmware + parameters</text>
+      <rect x="28" y="132" width="174" height="40" fill="#fff" stroke="#566472"/><text x="115" y="157" text-anchor="middle" font-weight="600">Telemetry radio / USB</text>
+      <line x1="222" y1="152" x2="318" y2="152" stroke="#14202B" stroke-width="2" marker-start="url(#ar)" marker-end="url(#ar)"/>
+      <text x="270" y="140" text-anchor="middle" font-weight="700" fill="#B5263A">MAVLink</text>
+      <text x="270" y="172" text-anchor="middle" fill="#566472" font-size="10">telemetry, commands</text><text x="270" y="185" text-anchor="middle" fill="#566472" font-size="10">params, missions</text>
+      <rect x="320" y="40" width="210" height="150" fill="#0E1620"/>
+      <text x="425" y="64" text-anchor="middle" font-weight="700" font-size="14" fill="#fff">GROUND (WINDOWS PC)</text>
+      <rect x="338" y="80" width="174" height="92" fill="#1A2129" stroke="#3A9FE0"/>
+      <text x="425" y="112" text-anchor="middle" font-weight="700" fill="#fff" font-size="14">Sarus Operation</text><text x="425" y="130" text-anchor="middle" font-weight="700" fill="#fff" font-size="14">Planner</text>
+      <text x="425" y="152" text-anchor="middle" fill="#9AA8B6" font-size="11">plan · fly · tune · review</text>
+      <rect x="590" y="20" width="160" height="56" fill="#fff" stroke="#566472"/><text x="670" y="44" text-anchor="middle" font-weight="600">ArduPilot servers</text><text x="670" y="61" text-anchor="middle" fill="#566472" font-size="11">firmware, parameter docs</text>
+      <rect x="590" y="96" width="160" height="56" fill="#fff" stroke="#566472"/><text x="670" y="120" text-anchor="middle" font-weight="600">Sarus on GitHub</text><text x="670" y="137" text-anchor="middle" fill="#566472" font-size="11">app updates, source</text>
+      <rect x="590" y="172" width="160" height="56" fill="#fff" stroke="#566472"/><text x="670" y="196" text-anchor="middle" font-weight="600">Map providers</text><text x="670" y="213" text-anchor="middle" fill="#566472" font-size="11">satellite and street maps</text>
+      <line x1="532" y1="90" x2="588" y2="52" stroke="#14202B" stroke-width="1.5" marker-end="url(#ar)"/>
+      <line x1="532" y1="115" x2="588" y2="122" stroke="#14202B" stroke-width="1.5" marker-end="url(#ar)"/>
+      <line x1="532" y1="150" x2="588" y2="196" stroke="#14202B" stroke-width="1.5" marker-end="url(#ar)"/>
+      <text x="560" y="240" text-anchor="middle" fill="#566472" font-size="11">Internet (only when available)</text>
+    </svg>
+    <figcaption>Figure 1. How Sarus Operation Planner fits into an ArduPilot drone system.</figcaption>
+  </figure>
+
+  <h3>MAVLink</h3>
+  <p>Aircraft and ground station talk in MAVLink, a compact message format. The aircraft streams its attitude, position and battery state several times a second. The ground station sends requests, such as "what is TECS_CLMB_MAX?" or "switch to AUTO", and waits for the matching answer. Radio links drop messages now and then, so the ground station has to notice a missing reply and ask again.</p>
+
+  <h3>Mission Planner</h3>
+  <p>Mission Planner is the free, open-source ground station written by Michael Oborne and the ArduPilot community. It is the most complete ArduPilot ground station for Windows and the one most ArduPilot pilots learn on. Its licence, the GNU GPL version 3, lets any company copy, change and sell it, on one condition: the changed source code must be published under the same licence.</p>
+
+  <h3>QuadPlane</h3>
+  <p>Our main airframe is a QuadPlane, a fixed-wing aircraft with four extra lift motors. It takes off and lands like a multirotor and cruises like an aeroplane, and ArduPilot Plane flies both phases. Speed and height in winged flight are handled by a controller called TECS. Being able to tune TECS and the VTOL (Q_) parameters without the ground station getting in the way was one of the main requirements for this project.</p>
+</section>
+
+<section class="chapter cont" id="s3">
+  <h2><span class="n">03</span>Requirements and how they were met</h2>
+  <table>
+    <thead><tr><th>Requirement</th><th>How it was met</th></tr></thead>
+    <tbody>
+      <tr><td class="k">Exactly Mission Planner's features</td><td>No button, screen, feature or shortcut was removed, moved or rebound. A scan of the source compares every menu, screen, control and shortcut with stock Mission Planner; it finds no differences apart from three intended name changes.</td></tr>
+      <tr><td class="k">Sarus look</td><td>Sarus Dark (default) and Sarus Light themes, redrawn menu icons, the crane logo in the top-right corner (it opens sarusaerospace.in), splash screen, program icon and installer. HUD and map colours stay as they were, so pilots read them the same way.</td></tr>
+      <tr><td class="k">New firmware visible at once</td><td>Install Firmware reads ArduPilot's live firmware list, so a new ArduPilot release shows up the day it is published. The Sarus firmware list is read the same way, and Sarus builds appear next to ArduPilot's.</td></tr>
+      <tr><td class="k">Tune freely, still see errors</td><td>Out-of-range values are accepted and marked amber. Read-only parameters can be changed after a confirmation. Every written value is checked against what the aircraft stored.</td></tr>
+      <tr><td class="k">One setup file for any Windows 10 or 11 PC</td><td>A standard Windows installer, built in the cloud and installed as a test on fresh Windows Server 2022 and 2025 machines, which correspond to Windows 10 and 11.</td></tr>
+      <tr><td class="k">No defects</td><td>Simulator flights for three vehicle types, parameter sweeps, every setup page, shortcuts, bad-link flights, a 4-hour endurance run and stress tests (chapter 6). Faults found in Mission Planner itself were fixed and are listed in chapter 5.</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section class="chapter" id="s4">
+  <h2><span class="n">04</span>How the work was done</h2>
+  <figure class="diagram">
+    <svg viewBox="0 0 760 120" xmlns="http://www.w3.org/2000/svg" font-family="Source Sans 3, Segoe UI, sans-serif" font-size="12">
+      <defs><marker id="a2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#B5263A"/></marker></defs>
+      <g>
+        <rect x="4" y="20" width="112" height="74" fill="#F3F5F7" stroke="#14202B"/><text x="60" y="48" text-anchor="middle" font-weight="700">1 · Base</text><text x="60" y="66" text-anchor="middle" fill="#566472" font-size="11">Mission Planner</text><text x="60" y="80" text-anchor="middle" fill="#566472" font-size="11">1.3.83 source</text>
+        <rect x="132" y="20" width="112" height="74" fill="#F3F5F7" stroke="#14202B"/><text x="188" y="48" text-anchor="middle" font-weight="700">2 · Change</text><text x="188" y="66" text-anchor="middle" fill="#566472" font-size="11">small, reviewed</text><text x="188" y="80" text-anchor="middle" fill="#566472" font-size="11">commits</text>
+        <rect x="260" y="20" width="112" height="74" fill="#F3F5F7" stroke="#14202B"/><text x="316" y="48" text-anchor="middle" font-weight="700">3 · Simulate</text><text x="316" y="66" text-anchor="middle" fill="#566472" font-size="11">automatic flights</text><text x="316" y="80" text-anchor="middle" fill="#566472" font-size="11">in ArduPilot SITL</text>
+        <rect x="388" y="20" width="112" height="74" fill="#F3F5F7" stroke="#14202B"/><text x="444" y="48" text-anchor="middle" font-weight="700">4 · Build</text><text x="444" y="66" text-anchor="middle" fill="#566472" font-size="11">GitHub cloud:</text><text x="444" y="80" text-anchor="middle" fill="#566472" font-size="11">build, test, MSI</text>
+        <rect x="516" y="20" width="112" height="74" fill="#F3F5F7" stroke="#14202B"/><text x="572" y="48" text-anchor="middle" font-weight="700">5 · Install test</text><text x="572" y="66" text-anchor="middle" fill="#566472" font-size="11">clean Windows</text><text x="572" y="80" text-anchor="middle" fill="#566472" font-size="11">2022 and 2025</text>
+        <rect x="644" y="20" width="112" height="74" fill="#0E1620"/><text x="700" y="48" text-anchor="middle" font-weight="700" fill="#fff">6 · Release</text><text x="700" y="66" text-anchor="middle" fill="#9AA8B6" font-size="11">GitHub Releases</text><text x="700" y="80" text-anchor="middle" fill="#9AA8B6" font-size="11">+ in-app update</text>
+        <line x1="117" y1="57" x2="130" y2="57" stroke="#B5263A" stroke-width="2" marker-end="url(#a2)"/><line x1="245" y1="57" x2="258" y2="57" stroke="#B5263A" stroke-width="2" marker-end="url(#a2)"/><line x1="373" y1="57" x2="386" y2="57" stroke="#B5263A" stroke-width="2" marker-end="url(#a2)"/><line x1="501" y1="57" x2="514" y2="57" stroke="#B5263A" stroke-width="2" marker-end="url(#a2)"/><line x1="629" y1="57" x2="642" y2="57" stroke="#B5263A" stroke-width="2" marker-end="url(#a2)"/>
+      </g>
+    </svg>
+    <figcaption>Figure 2. The path from source code to a released installer.</figcaption>
+  </figure>
+
+  <h3>A stable starting point</h3>
+  <p>We took Mission Planner's last stable release, 1.3.83, rather than its development branch, which did not compile at the time. Before changing anything we built and tested the stock program to have something to compare against. It passed 3 of 3 simulator flights. Seven of its 38 unit tests failed, and they fail the same way in Mission Planner itself.</p>
+
+  <h3>Small changes, one at a time</h3>
+  <p>The work went in as 18 separate commits, each with a description, so any one of them can be reviewed or undone without touching the others. Where Mission Planner already offers a way to customise something (theme files, menu icon overrides, the logo file, the application name), we used it instead of editing program logic. Name replacements in the source were made by script, and the script stops if the number of replacements differs from what was expected.</p>
+
+  <h3>A test pilot made of software</h3>
+  <p>Most of the testing was done by a test harness we wrote for this project. It starts the real Sarus program, connects it to ArduPilot's simulator and then works the program the way a pilot would: connecting, opening every screen, changing parameters, uploading missions, arming, flying and pressing shortcuts, checking the result each time. Each test was run against stock Mission Planner first, so every Sarus result has a Mission Planner result next to it.</p>
+
+  <h3>Builds in the cloud</h3>
+  <p>The source code is public at <a href="https://github.com/LikhitS/SarusOperationPlanner">github.com/LikhitS/SarusOperationPlanner</a>, as the GPL requires. Each change pushed there is compiled on a GitHub Windows machine, unit-tested and packaged as an installer. Two more fresh Windows machines then install it silently next to a stock Mission Planner, start it, leave it running for a minute and uninstall it. Pushing a version tag such as <code>v1.0.0</code> publishes the result as a GitHub release, which is where both the download page and the program's own updater look for new versions.</p>
+</section>
+
+<section class="chapter" id="s5">
+  <h2><span class="n">05</span>What changed</h2>
+
+  <h3>5.1 Identity and installation</h3>
+  <table>
+    <thead><tr><th>Area</th><th>Mission Planner</th><th>Sarus Operation Planner</th></tr></thead>
+    <tbody>
+      <tr><td class="k">Name and logo</td><td>Mission Planner, ArduPilot logo</td><td>Sarus Operation Planner, crane logo; clicking it opens sarusaerospace.in</td></tr>
+      <tr><td class="k">Look</td><td>Mission Planner themes</td><td>Sarus Dark (default) and Sarus Light, new menu icons from Tabler Icons (MIT licence); Mission Planner's themes can still be chosen</td></tr>
+      <tr><td class="k">Installer</td><td>Mission Planner MSI</td><td>Its own MSI with its own product identity, so it installs beside Mission Planner rather than over it; its own file associations for .tlog, .bin and .log</td></tr>
+      <tr><td class="k">Settings and logs</td><td>Documents\Mission Planner</td><td>Documents\Sarus Operation Planner and ProgramData\Sarus Operation Planner</td></tr>
+      <tr><td class="k">Program updates</td><td>ArduPilot servers</td><td>Sarus releases on GitHub</td></tr>
+      <tr><td class="k">Usage statistics</td><td>On by default</td><td>Off by default (CONFIG → Planner can turn them on)</td></tr>
+      <tr><td class="k">Firmware list</td><td>ArduPilot</td><td>ArduPilot plus Sarus builds</td></tr>
+      <tr><td class="k">Version</td><td>1.3.83</td><td>1.0.0; the file version stays 1.3.83 to show the Mission Planner base</td></tr>
+    </tbody>
+  </table>
+  <p class="muted">USB drivers and their signing certificate, map providers, the parameter documentation source and every feature and shortcut were deliberately left as Mission Planner has them.</p>
+
+  <h3>5.2 Parameter editing</h3>
+  <p>In Mission Planner, typing a value outside the recommended range brings up a Yes/No question for every such value, read-only parameters cannot be changed at all, and the table shows whatever was typed even if the aircraft rounded or limited it. Sarus handles all three differently. Out-of-range values are accepted without a question; the cell turns amber and its tooltip gives the recommended range. A read-only parameter can be changed after a clear warning. And once a write is done, the program reads every written value back from the aircraft. Anything the aircraft did not keep is listed in a "Values changed by aircraft" window, and the table shows the real value.</p>
+  <div class="callout"><strong class="t">Found during testing</strong>
+    <p>Asked to set <code>Q_LOIT_ACC_MAX_M</code> to 9.81, the aircraft confirmed it and then ran at 5.66. Mission Planner would have shown 9.81. Sarus shows 5.66 and says so.</p>
+  </div>
+
+  <h3>5.3 Lost replies</h3>
+  <p>When Mission Planner waits for an answer from the aircraft, the waiting code reads incoming messages one by one and throws away whatever it is not waiting for. That works until two parts of the program wait at the same moment, say a background camera query while the pilot reads parameters. Then one of them can pick up the other's reply and discard it. The aircraft answered; the pilot still gets "timeout" or "command failed".</p>
+  <p>In Sarus, a request first registers for the reply it expects and only then sends the question. Every waiting request gets its own copy of each incoming message, so nothing can be taken from it. This now covers parameter reads and writes, command acknowledgements, commands with coordinates, mission upload and download, setting the current waypoint, and the flight-log list. The numbers below come from the simulator under deliberately heavy load.</p>
+  <table>
+    <thead><tr><th>Operation</th><th class="num">Mission Planner</th><th class="num">Sarus 1.0.0</th></tr></thead>
+    <tbody>
+      <tr><td>Parameter reads</td><td class="num bad">6 of 45 lost</td><td class="num good">0 of 600 lost</td></tr>
+      <tr><td>Command acknowledgements (arm, mode)</td><td class="num bad">5 of 15 lost</td><td class="num good">0 of 1,811 lost</td></tr>
+      <tr><td>Mission upload and download</td><td class="num bad">4 of 10 failed</td><td class="num good">0 failed</td></tr>
+      <tr><td>Commands with coordinates</td><td class="num bad">2 of 45 lost</td><td class="num good">0 of 887 lost</td></tr>
+      <tr><td>Flight-log list during parameter reads</td><td class="num">not measured</td><td class="num good">0 of 326 failed</td></tr>
+    </tbody>
+  </table>
+
+  <h3>5.4 Other Mission Planner faults we fixed</h3>
+  <p>The update check showed an error whenever the update server had no file yet; it now reports quietly that there is no update. Plugins compiled by an older version were reused after an upgrade and then failed every second, so the plugin cache now includes the program's build identity. The updater used to download a whole release file just to learn its size, where reading the size header is enough. When a legacy rally-point request was lost, the retry went out as a fence request and could never succeed; it now sends the right message.</p>
+  <p>The silent-install problem took longest to find. Mission Planner's installer starts a USB driver wizard that waits for a click. In a silent installation (<code>msiexec /qn</code>, as IT departments use) nobody can click, and the installation never ends. Stock Mission Planner hung there on both of our test machines. Sarus runs that driver step quietly when the installation is silent; normal installations are unchanged. In a silent install Windows adds only drivers whose publisher is already trusted, which keeps the same trust model as Mission Planner.</p>
+</section>
+
+<section class="chapter" id="s6">
+  <h2><span class="n">06</span>Testing</h2>
+  <table>
+    <thead><tr><th>Test</th><th>What was done</th><th>Result</th></tr></thead>
+    <tbody>
+      <tr><td class="k">Feature parity</td><td>Scan of every menu, screen, control and keyboard shortcut, compared with stock Mission Planner</td><td class="good">No differences besides 3 intended renames</td></tr>
+      <tr><td class="k">Unit tests</td><td>Mission Planner's own test suite</td><td class="good">31 of 38, same as stock (7 known upstream failures)</td></tr>
+      <tr><td class="k">QuadPlane flights</td><td>Connect, upload mission, arm, VTOL take-off, waypoints, VTOL landing; 42 checks per flight</td><td class="good">3 of 3 flights, 42 of 42 checks</td></tr>
+      <tr><td class="k">Copter flight</td><td>Take-off, waypoints, return to launch</td><td class="good">Pass</td></tr>
+      <tr><td class="k">Rover drive</td><td>Parameters, modes, a square mission and return; parameter editor checks; log list</td><td class="good">59 of 59 checks</td></tr>
+      <tr><td class="k">Endurance</td><td>QuadPlane VTOL missions back to back for 4 hours</td><td class="good">98 of 98, memory +24 MB</td></tr>
+      <tr><td class="k">Parameter sweeps</td><td>Every vehicle parameter written, read back and restored</td><td class="good">~1,180 QuadPlane, ~1,000 Copter, 886 Rover</td></tr>
+      <tr><td class="k">Setup pages</td><td>Every SETUP and CONFIG page opened while connected</td><td class="good">46 QuadPlane, 48 Copter</td></tr>
+      <tr><td class="k">Keyboard shortcuts</td><td>F2, F3, F4, F5, F12 and Ctrl+F, P, G, X, L, W, J, Y</td><td class="good">All pass</td></tr>
+      <tr><td class="k">Bad radio link</td><td>5% packet loss, 300 ms delay and a 10-second blackout in flight</td><td class="good">Telemetry back 0.3 s after the link returned</td></tr>
+      <tr><td class="k">Stress</td><td>Many requests at once (section 5.3)</td><td class="good">No lost replies</td></tr>
+      <tr><td class="k">Clean-machine install</td><td>Silent install beside Mission Planner on fresh Windows Server 2022 and 2025, run for 60 s, uninstall</td><td class="good">Pass on both, 228–236 MB in use after 60 s</td></tr>
+    </tbody>
+  </table>
+  <p class="muted">The parameter sweeps leave out the simulator's own physics settings (SIM_*) and the identity and link settings whose change would cut the test's connection.</p>
+
+  <h3>What the tests showed about ArduPilot</h3>
+  <p>The sweeps also exposed firmware behaviour that every ground station inherits, and which Sarus now reports to the pilot. <code>Q_LOIT_ACC_MAX_M</code> and <code>LOIT_ACC_MAX_M</code> are limited after the aircraft has accepted them. <code>EK3_BCN_DELAY</code>, <code>EK3_FLOW_DELAY</code> and <code>LAND_THR_SLEW</code> are stored in 8 bits and stop at 127, although their documentation allows more. The firmware overwrites <code>BARO*_GND_PRESS</code> by itself, and <code>MIS_TOTAL</code> cannot be written. In the simulator, parameter storage fills up after about 600 changed values. These are the first candidates for changes in the Sarus firmware.</p>
+</section>
+
+<section class="chapter" id="s7">
+  <h2><span class="n">07</span>What it gives Sarus</h2>
+  <p>Pilots lose nothing. The screens and shortcuts are the ones every ArduPilot pilot already knows, so existing Mission Planner tutorials still apply. What they gain is fewer false "timeout" and "command failed" messages, which matters most on long-range radio links, a parameter table that shows the values the aircraft is actually using, and room to tune the QuadPlane without being stopped by warnings.</p>
+  <p>For the company the gain is control. Sarus can ship a ground station under its own name with its aircraft, choose when to release, and fix problems without waiting for another project's schedule. The build and release pipeline is repeatable and tested, so a release does not depend on one person's laptop. It is also the base for the Sarus firmware and for the Linux, macOS and Android versions that come later.</p>
+</section>
+
+<section class="chapter cont" id="s8">
+  <h2><span class="n">08</span>Open items</h2>
+  <table>
+    <thead><tr><th>Item</th><th>Status and next step</th><th>Owner</th></tr></thead>
+    <tbody>
+      <tr><td class="k">Real-hardware test</td><td>Bench and first flight with a Pixhawk QuadPlane, following the Field Test Checklist. Required before operational use.</td><td>Flight team</td></tr>
+      <tr><td class="k">Code signing</td><td>Until the installer is signed, Windows warns "Windows protected your PC". Needs a D-U-N-S number, then an OV certificate with cloud signing; the credentials go into GitHub Secrets.</td><td>Management</td></tr>
+      <tr><td class="k">First app release</td><td>Push the tag <code>v1.0.0</code> once the field test has passed.</td><td>Management, engineering</td></tr>
+      <tr><td class="k">First firmware release</td><td><code>sarus-v4.7.1-S1</code>, after the Sarus firmware has passed the simulator tests.</td><td>Engineering</td></tr>
+      <tr><td class="k">Legal</td><td>Lawyer review of terms of use, privacy notice and safety disclaimer; trademark search; DGCA obligations under the Drone Rules 2021.</td><td>Management</td></tr>
+      <tr><td class="k">High-resolution screens</td><td>Text is slightly soft above 100% Windows scaling, as in Mission Planner.</td><td>Engineering</td></tr>
+      <tr><td class="k">Other platforms</td><td>Linux, macOS and Android, reusing the same core code. See the Future Plans document.</td><td>Engineering</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section class="chapter" id="s9">
+  <h2><span class="n">09</span>Licence and credits</h2>
+  <p>Sarus Operation Planner is free software under the GNU General Public License version 3. The complete source, Sarus changes included, is at <a href="https://github.com/LikhitS/SarusOperationPlanner">github.com/LikhitS/SarusOperationPlanner</a>, and the Sarus firmware source at <a href="https://github.com/LikhitS/ardupilot">github.com/LikhitS/ardupilot</a>. As the licence states, there is no warranty.</p>
+  <p>The program is based on Mission Planner by Michael Oborne and the ArduPilot contributors. ArduPilot and Mission Planner belong to their respective owners, who do not endorse this product. The menu icons come from Tabler Icons, under the MIT licence.</p>
+</section>
+
+<section class="chapter" id="s10">
+  <h2><span class="n">10</span>Abbreviations</h2>
+  <table class="glossary">
+    <thead><tr><th>Term</th><th>Meaning</th></tr></thead>
+    <tbody>
+      <tr><td class="k">ACK</td><td>Acknowledgement, the aircraft's reply confirming a command</td></tr>
+      <tr><td class="k">ADS-B</td><td>Automatic Dependent Surveillance–Broadcast, position broadcasts used for traffic awareness</td></tr>
+      <tr><td class="k">AHRS</td><td>Attitude and Heading Reference System</td></tr>
+      <tr><td class="k">CI</td><td>Continuous Integration: every change is built and tested automatically (here by GitHub Actions)</td></tr>
+      <tr><td class="k">DGCA</td><td>Directorate General of Civil Aviation, India</td></tr>
+      <tr><td class="k">DPI</td><td>Dots per inch; the Windows screen-scaling setting</td></tr>
+      <tr><td class="k">D-U-N-S</td><td>Data Universal Numbering System, a company identifier that code-signing authorities require</td></tr>
+      <tr><td class="k">EKF</td><td>Extended Kalman Filter, ArduPilot's position and attitude estimator (EK3 is version 3)</td></tr>
+      <tr><td class="k">ESC</td><td>Electronic Speed Controller, which drives a brushless motor</td></tr>
+      <tr><td class="k">FBWA / FBWB</td><td>Fly-By-Wire A and B, assisted fixed-wing modes</td></tr>
+      <tr><td class="k">GCS</td><td>Ground Control Station</td></tr>
+      <tr><td class="k">GPL</td><td>GNU General Public License</td></tr>
+      <tr><td class="k">GPS / GNSS</td><td>Global Positioning System / Global Navigation Satellite System</td></tr>
+      <tr><td class="k">HDOP</td><td>Horizontal Dilution of Precision; lower means a better GPS fix</td></tr>
+      <tr><td class="k">HUD</td><td>Head-Up Display, the artificial horizon and instruments on the DATA screen</td></tr>
+      <tr><td class="k">MAVLink</td><td>Micro Air Vehicle Link, the message format between aircraft and ground</td></tr>
+      <tr><td class="k">MP</td><td>Mission Planner</td></tr>
+      <tr><td class="k">MSI</td><td>Microsoft Installer, the Windows setup file format</td></tr>
+      <tr><td class="k">OV</td><td>Organisation Validated, a type of code-signing certificate</td></tr>
+      <tr><td class="k">PID</td><td>Proportional–Integral–Derivative, the control loops tuned to make an aircraft fly well</td></tr>
+      <tr><td class="k">QHOVER / QLOITER / QRTL</td><td>QuadPlane VTOL modes: hover, hold position, return to launch</td></tr>
+      <tr><td class="k">RC</td><td>Radio Control: the pilot's transmitter and the receiver on the aircraft</td></tr>
+      <tr><td class="k">RTL</td><td>Return To Launch</td></tr>
+      <tr><td class="k">SITL</td><td>Software In The Loop, ArduPilot's simulator, which runs the real firmware on a PC</td></tr>
+      <tr><td class="k">TECS</td><td>Total Energy Control System, ArduPlane's combined speed and height controller</td></tr>
+      <tr><td class="k">tlog / bin</td><td>Telemetry log recorded by the ground station / log recorded on the flight controller</td></tr>
+      <tr><td class="k">UI / UX</td><td>User Interface / User Experience</td></tr>
+      <tr><td class="k">VTOL</td><td>Vertical Take-Off and Landing</td></tr>
+      <tr><td class="k">WP</td><td>Waypoint</td></tr>
+    </tbody>
+  </table>
+  <div class="sig">
+    <div>Prepared by: Engineering</div>
+    <div>Reviewed by:</div>
+    <div>Approved by:</div>
+  </div>
+</section>
+</body>
+</html>

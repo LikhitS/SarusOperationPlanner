@@ -1,0 +1,152 @@
+<title>Sarus Field Test Checklist</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600;700&family=Source+Sans+3:wght@400;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: preflight-card style checklist; phases in order, each item a tickable row with an expected result */
+:root {
+  --bg: #f4f6f8; --surface: #ffffff; --ink: #14202b; --muted: #566472; --line: #d5dce3;
+  --accent: #1a6fae; --brand: #b5263a; --ok: #1f8f57; --hazard: #b7791f; --done: #e7f3ec;
+  --display: "Barlow Semi Condensed", "Arial Narrow", system-ui, sans-serif;
+  --body: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+  --mono: "JetBrains Mono", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #11161c; --surface: #1a2129; --ink: #e7ecf1; --muted: #9aa8b6; --line: #2d3843;
+  --accent: #62b5ec; --brand: #e0566a; --ok: #4cc58a; --hazard: #e8b45a; --done: #18302a; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #11161c; --surface: #1a2129; --ink: #e7ecf1; --muted: #9aa8b6; --line: #2d3843;
+  --accent: #62b5ec; --brand: #e0566a; --ok: #4cc58a; --hazard: #e8b45a; --done: #18302a; color-scheme: dark }
+body { background: var(--bg); color: var(--ink); font: 16px/1.55 var(--body); }
+.wrap { max-width: 900px; margin: 0 auto; padding-inline: 18px; padding-block: 36px 64px; }
+header { display: grid; gap: 8px; border-bottom: 2px solid var(--ink); padding-bottom: 16px; }
+.eyebrow { font: 600 12px/1 var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--brand); }
+h1 { font: 700 clamp(1.9rem, 5vw, 2.8rem)/1.05 var(--display); margin: 0; }
+.lede { color: var(--muted); margin: 0; max-width: 66ch; }
+.bar { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-top: 18px; }
+.progress { flex: 1 1 220px; height: 8px; background: var(--line); }
+.progress > i { display: block; height: 100%; width: 0; background: var(--ok); transition: width .2s; }
+.count { font: 600 13px/1 var(--mono); font-variant-numeric: tabular-nums; }
+button { font: 600 13px/1 var(--body); padding: 8px 12px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.hazard { margin: 22px 0 0; padding: 12px 16px; border: 2px solid var(--hazard); display: grid; gap: 4px; }
+.hazard strong { font: 700 13px/1.2 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--hazard); }
+section { margin-top: 30px; }
+h2 { font: 600 1.35rem/1.2 var(--display); margin: 0 0 4px; display: flex; gap: 10px; align-items: baseline; }
+h2 .phase { font: 600 12px/1 var(--mono); color: var(--muted); letter-spacing: .08em; }
+.when { color: var(--muted); margin: 0 0 10px; font-size: .95rem; }
+ol { list-style: none; padding: 0; margin: 0; border-top: 1px solid var(--line); }
+li { display: grid; grid-template-columns: 26px minmax(0, 1fr); gap: 10px; padding: 10px 4px; border-bottom: 1px solid var(--line); }
+li.checked { background: var(--done); }
+li input { width: 18px; height: 18px; margin-top: 3px; accent-color: var(--ok); }
+label { cursor: pointer; display: grid; gap: 2px; min-width: 0; }
+.what { font-weight: 600; }
+.expect { color: var(--muted); font-size: .94rem; }
+.expect b { color: var(--ink); font-weight: 600; }
+code { font-family: var(--mono); font-size: .86em; }
+.log { margin-top: 34px; background: var(--surface); border: 1px solid var(--line); padding: 16px 18px; }
+.log h2 { margin-bottom: 8px; }
+.log ul { margin: 0; padding-left: 1.1rem; display: grid; gap: 4px; }
+footer { margin-top: 40px; color: var(--muted); font-size: .9rem; border-top: 1px solid var(--line); padding-top: 12px; }
+@media (prefers-reduced-motion: reduce) { .progress > i { transition: none; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <span class="eyebrow">Sarus Operation Planner 1.0.0 · bench and first flight</span>
+    <h1>Sarus Field Test Checklist</h1>
+    <p class="lede">Nothing here is optional. Work through the four phases in order before Sarus Operation Planner controls a real aircraft, and if an item fails, stop there and find out why before going on. The ticks are remembered by this browser only, so use one device per test.</p>
+    <div class="bar" aria-live="polite">
+      <div class="progress" aria-hidden="true"><i id="fill"></i></div>
+      <span class="count" id="count">0 / 0</span>
+      <button type="button" id="reset">Clear all ticks</button>
+    </div>
+    <div class="hazard"><strong>Props off</strong><span>Every propeller stays off through phases A, B and C. They go on for phase D only, outdoors, with a second person watching and the pilot holding the RC transmitter.</span></div>
+  </header>
+
+  <section>
+    <h2><span class="phase">A</span> Before you start</h2>
+    <p class="when">At the desk, before connecting anything.</p>
+    <ol>
+      <li><input type="checkbox" id="a1"><label for="a1"><span class="what">Record the versions under test</span><span class="expect">Sarus version (Help screen), flight controller board, ArduPilot firmware version, telemetry radio model.</span></label></li>
+      <li><input type="checkbox" id="a2"><label for="a2"><span class="what">Save a parameter backup</span><span class="expect">CONFIG → Full Parameter List → <b>Save</b>. Keep the file with the test record.</span></label></li>
+      <li><input type="checkbox" id="a3"><label for="a3"><span class="what">Check the RC transmitter failsafe</span><span class="expect">Transmitter off → receiver outputs failsafe throttle. Know which flight mode the aircraft enters.</span></label></li>
+      <li><input type="checkbox" id="a4"><label for="a4"><span class="what">Choose the light and dark theme for the field</span><span class="expect">Open Sarus outdoors in sunlight and pick the theme you can read best.</span></label></li>
+    </ol>
+  </section>
+
+  <section>
+    <h2><span class="phase">B</span> Connect</h2>
+    <p class="when">Aircraft on the bench with the battery in. Props still off.</p>
+    <ol>
+      <li><input type="checkbox" id="b1"><label for="b1"><span class="what">Connect over USB</span><span class="expect">Pick the COM port, 115200, Connect. <b>Expect:</b> parameters download, HUD moves, title bar shows the firmware version.</span></label></li>
+      <li><input type="checkbox" id="b2"><label for="b2"><span class="what">Connect over the telemetry radio</span><span class="expect">Usually 57600. <b>Expect:</b> link quality above 90% at bench distance, no "no data" warnings.</span></label></li>
+      <li><input type="checkbox" id="b3"><label for="b3"><span class="what">Unplug and replug the radio while connected</span><span class="expect"><b>Expect:</b> telemetry resumes within a few seconds of reconnecting, no error dialogs.</span></label></li>
+    </ol>
+  </section>
+
+  <section>
+    <h2><span class="phase">C</span> Bench checks</h2>
+    <p class="when">Props off. For these checks you move the aircraft by hand and watch the screen.</p>
+    <ol>
+      <li><input type="checkbox" id="c1"><label for="c1"><span class="what">Attitude matches the airframe</span><span class="expect">Roll right, pitch nose up, yaw right by hand. <b>Expect:</b> the HUD moves the same way.</span></label></li>
+      <li><input type="checkbox" id="c2"><label for="c2"><span class="what">Heading and GPS</span><span class="expect"><b>Expect:</b> heading within about 10° of a phone compass; outdoors, 3D fix with HDOP below 1.5.</span></label></li>
+      <li><input type="checkbox" id="c3"><label for="c3"><span class="what">Battery reading</span><span class="expect">Compare with a multimeter. <b>Expect:</b> voltage within 0.1 V.</span></label></li>
+      <li><input type="checkbox" id="c4"><label for="c4"><span class="what">RC inputs and flight mode switch</span><span class="expect">SETUP → Radio Calibration. Move every stick and switch. <b>Expect:</b> the mode shown in Sarus matches the switch position.</span></label></li>
+      <li><input type="checkbox" id="c5"><label for="c5"><span class="what">Motor and servo test</span><span class="expect">SETUP → Optional Hardware → Motor Test at 5% throttle, props off. <b>Expect:</b> each VTOL motor spins in the order and direction of your frame diagram; control surfaces move the right way.</span></label></li>
+      <li><input type="checkbox" id="c6"><label for="c6"><span class="what">Parameter write and read-back</span><span class="expect">Change <code>TECS_CLMB_MAX</code> by 0.5 in the Full Parameter List, Write, then set it back. <b>Expect:</b> no "values changed by aircraft" message for a normal value.</span></label></li>
+      <li><input type="checkbox" id="c7"><label for="c7"><span class="what">Out-of-range warning</span><span class="expect">Type a value above the recommended maximum. <b>Expect:</b> amber cell with the range in its tooltip and no blocking question. Do not write it; press Refresh.</span></label></li>
+      <li><input type="checkbox" id="c8"><label for="c8"><span class="what">Mission, fence and rally round trip</span><span class="expect">PLAN: create a short mission with VTOL takeoff and VTOL land, Write, then Read. <b>Expect:</b> identical points, altitudes and commands. Repeat for a geofence and a rally point.</span></label></li>
+      <li><input type="checkbox" id="c9"><label for="c9"><span class="what">Arming checks are shown</span><span class="expect">Try to arm with a known problem (for example no GPS fix). <b>Expect:</b> the PreArm message appears on the HUD and in Messages.</span></label></li>
+      <li><input type="checkbox" id="c10"><label for="c10"><span class="what">Log download</span><span class="expect">DATA → DataFlash Logs → Download. <b>Expect:</b> the latest log downloads and opens in Review a Log.</span></label></li>
+      <li><input type="checkbox" id="c11"><label for="c11"><span class="what">Telemetry link loss on the bench</span><span class="expect">Power off the ground radio for 15 s, then on. <b>Expect:</b> Sarus shows the loss, telemetry returns, and the aircraft takes the GCS failsafe action you configured.</span></label></li>
+    </ol>
+  </section>
+
+  <section>
+    <h2><span class="phase">D</span> First flight, QuadPlane</h2>
+    <p class="when">An open area, props on, an observer beside you and the transmitter ready to take over. Go higher or further only when the step before has worked.</p>
+    <ol>
+      <li><input type="checkbox" id="d1"><label for="d1"><span class="what">QHOVER hover at 3–5 m</span><span class="expect"><b>Expect:</b> stable hover; Sarus altitude within about 1 m of a visual estimate.</span></label></li>
+      <li><input type="checkbox" id="d2"><label for="d2"><span class="what">QLOITER hold</span><span class="expect"><b>Expect:</b> holds position within a few metres for 30 s; mode shown correctly in Sarus.</span></label></li>
+      <li><input type="checkbox" id="d3"><label for="d3"><span class="what">Transition to fixed wing</span><span class="expect">At a safe height, switch to FBWA. <b>Expect:</b> "Transition" messages in Sarus, airspeed rising past ARSPD_FBW_MIN, clean forward flight.</span></label></li>
+      <li><input type="checkbox" id="d4"><label for="d4"><span class="what">TECS behaviour</span><span class="expect">FBWB or CRUISE, then climb and descend. <b>Expect:</b> climb and sink rates close to TECS_CLMB_MAX and TECS_SINK_MAX.</span></label></li>
+      <li><input type="checkbox" id="d5"><label for="d5"><span class="what">Small AUTO mission</span><span class="expect">VTOL takeoff, two waypoints, VTOL land. <b>Expect:</b> Sarus shows the current waypoint and the aircraft lands within a few metres of the planned point.</span></label></li>
+      <li><input type="checkbox" id="d6"><label for="d6"><span class="what">Return home</span><span class="expect">Switch to RTL (or QRTL) from a distance. <b>Expect:</b> the aircraft returns and lands as configured.</span></label></li>
+      <li><input type="checkbox" id="d7"><label for="d7"><span class="what">Link loss at altitude</span><span class="expect">With the pilot ready on the transmitter, switch off the ground radio for 10 s. <b>Expect:</b> the configured GCS failsafe action; Sarus recovers telemetry when the radio is back on.</span></label></li>
+    </ol>
+  </section>
+
+  <div class="log">
+    <h2>Keep with the test record</h2>
+    <p>File the telemetry logs (<code>.tlog</code>, found in <code>Documents\Sarus Operation Planner\logs</code>) and the flight controller's <code>.bin</code> log for every flight, together with the parameter backup from step A2. Add a note for anything unexpected, a message or a behaviour, and write down when it happened. A time stamp makes the log far easier to read later.</p>
+  </div>
+
+  <footer>Sarus Aerospace Pvt Ltd · checklist for Sarus Operation Planner 1.0.0. Heights, distances and failsafe actions here are examples; set them for your aircraft and for the Drone Rules that apply where you fly.</footer>
+</div>
+
+<script>
+(function () {
+  var KEY = 'sarus-field-checklist-v1';
+  var boxes = Array.prototype.slice.call(document.querySelectorAll('li input[type=checkbox]'));
+  var saved = {};
+  try { saved = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch (e) { saved = {}; }
+  function update() {
+    var n = 0;
+    boxes.forEach(function (b) { b.closest('li').classList.toggle('checked', b.checked); if (b.checked) n++; });
+    document.getElementById('count').textContent = n + ' / ' + boxes.length;
+    document.getElementById('fill').style.width = (100 * n / boxes.length) + '%';
+  }
+  function save() {
+    var s = {}; boxes.forEach(function (b) { if (b.checked) s[b.id] = 1; });
+    try { localStorage.setItem(KEY, JSON.stringify(s)); } catch (e) {}
+  }
+  boxes.forEach(function (b) {
+    b.checked = !!saved[b.id];
+    b.addEventListener('change', function () { save(); update(); });
+  });
+  document.getElementById('reset').addEventListener('click', function () {
+    boxes.forEach(function (b) { b.checked = false; }); save(); update();
+  });
+  update();
+})();
+</script>

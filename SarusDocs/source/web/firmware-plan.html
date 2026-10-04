@@ -1,0 +1,102 @@
+<title>Sarus Firmware Plan</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600;700&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: a plan document — summary, how it fits, phases as a numbered track, decisions table, risks */
+:root {
+  --bg: #f4f6f8; --surface: #ffffff; --ink: #14202b; --muted: #566472; --line: #d5dce3;
+  --accent: #1a6fae; --brand: #b5263a; --ok: #1f8f57; --warn: #b7791f; --note: #eef4fa;
+  --display: "Barlow Semi Condensed", "Arial Narrow", system-ui, sans-serif;
+  --body: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+  --mono: "JetBrains Mono", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #11161c; --surface: #1a2129; --ink: #e7ecf1; --muted: #9aa8b6; --line: #2d3843;
+  --accent: #62b5ec; --brand: #e0566a; --ok: #4cc58a; --warn: #e8b45a; --note: #18242f; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #11161c; --surface: #1a2129; --ink: #e7ecf1; --muted: #9aa8b6; --line: #2d3843;
+  --accent: #62b5ec; --brand: #e0566a; --ok: #4cc58a; --warn: #e8b45a; --note: #18242f; color-scheme: dark }
+body { background: var(--bg); color: var(--ink); font: 16px/1.6 var(--body); margin: 0; }
+.wrap { max-width: 880px; margin: 0 auto; padding-inline: 18px; padding-block: 36px 72px; }
+header { border-bottom: 2px solid var(--ink); padding-bottom: 16px; display: grid; gap: 8px; }
+.eyebrow { font: 600 12px/1 var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--brand); }
+h1 { font: 700 clamp(1.9rem, 5vw, 2.7rem)/1.05 var(--display); margin: 0; }
+.lede { color: var(--muted); margin: 0; max-width: 66ch; }
+h2 { font: 700 1.5rem/1.2 var(--display); margin: 40px 0 10px; display: flex; gap: 10px; align-items: baseline; }
+h2 .n { font: 600 13px/1 var(--mono); color: var(--brand); }
+h3 { font: 600 1.1rem/1.3 var(--display); margin: 18px 0 6px; }
+p, li { max-width: 72ch; }
+ul, ol { padding-left: 1.2rem; display: grid; gap: 6px; }
+code { font-family: var(--mono); font-size: .86em; }
+a { color: var(--accent); }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.tbl { overflow-x: auto; margin: 8px 0; }
+table { border-collapse: collapse; width: 100%; font-size: .94rem; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font: 600 11.5px/1.2 var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.flow { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; margin: 12px 0; }
+.flow div { background: var(--surface); border: 1px solid var(--line); border-top: 3px solid var(--accent); padding: 10px 12px; font-size: .92rem; }
+.flow b { display: block; font: 600 1rem/1.2 var(--display); margin-bottom: 2px; }
+.phases { list-style: none; padding: 0; counter-reset: ph; gap: 0; }
+.phases > li { counter-increment: ph; position: relative; padding: 4px 0 18px 46px; border-left: 2px solid var(--line); margin-left: 14px; }
+.phases > li::before { content: counter(ph); position: absolute; left: -15px; top: 0; width: 28px; height: 28px; border-radius: 50%; background: var(--ink); color: var(--bg); font: 700 14px/28px var(--display); text-align: center; }
+.phases > li:last-child { border-left-color: transparent; }
+.phases h3 { margin-top: 0; }
+.phases .out { color: var(--muted); font-size: .93rem; }
+.callout { background: var(--note); border-left: 3px solid var(--accent); padding: 12px 16px; margin: 14px 0; }
+.callout.warn { border-left-color: var(--warn); }
+.callout strong.t { display: block; font: 700 12px/1.2 var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--accent); margin-bottom: 4px; }
+.callout.warn strong.t { color: var(--warn); }
+.callout p:last-child, .callout ul:last-child { margin-bottom: 0; }
+.pill { font: 600 11px/1 var(--mono); letter-spacing: .06em; text-transform: uppercase; padding: 3px 6px; border: 1px solid currentColor; white-space: nowrap; }
+.you { color: var(--brand); } .me { color: var(--accent); }
+footer { margin-top: 56px; padding-top: 12px; border-top: 1px solid var(--line); color: var(--muted); font-size: .9rem; }
+</style>
+
+<div class="wrap">
+  <header>
+    <span class="eyebrow">Sarus Aerospace · firmware · status and plan</span>
+    <h1>Sarus Firmware Plan</h1>
+    <p class="lede">How Sarus builds its own ArduPilot firmware for Plane (QuadPlane included), Copter and Rover, how a release reaches the Install Firmware page, and what has been done so far.</p>
+  </header>
+
+  <h2><span class="n">01</span>Where it stands</h2>
+  <p>The fork exists. It lives at <a href="https://github.com/LikhitS/ardupilot">github.com/LikhitS/ardupilot</a> on the branch <code>sarus-4.7.1</code>, which starts from ArduPilot's stable 4.7.1 release. Plane, Copter and Rover 4.7.1 are one and the same commit, so a single branch covers all three.</p>
+  <p>So far the only change to the firmware itself is its name. It now reports <code>ArduPlane V4.7.1 Sarus-1</code>, and likewise for Copter and Rover. Flight behaviour is identical to ArduPilot 4.7.1. The <code>ArduPlane V</code> prefix stays deliberately: ground stations, Sarus Operation Planner included, use it to recognise the vehicle type, and if it were missing the program could treat a QuadPlane as a Copter and offer the wrong flight modes.</p>
+  <p>GitHub's cloud machines build the firmware for seven board families: CubeOrange, CubeOrangePlus, Pixhawk6X, Pixhawk6C, Pixhawk1, fmuv3 and MatekH743. Every build is checked for the Sarus name. The same run produces the Windows simulator, so the Sarus firmware can be flown in the simulator by the ground-station test harness. It has been: QuadPlane, Copter and Rover flights, the parameter editor checks, shortcuts under load and a sweep of every QuadPlane parameter all passed on the Sarus build.</p>
+
+  <h2><span class="n">02</span>From a release to the Install Firmware page</h2>
+  <div class="flow">
+    <div><b>Tag</b><code>sarus-v4.7.1-S1</code> pushed to the fork</div>
+    <div><b>Cloud build</b>all boards plus the Windows simulator</div>
+    <div><b>Release</b>files named <code>Sarus-Plane-4.7.1-S1-CubeOrange.apj</code> and so on</div>
+    <div><b>Firmware list</b><code>manifest.json</code> on the <code>sarus-manifest</code> branch</div>
+    <div><b>Sarus Planner</b>reads it at start-up next to ArduPilot's list</div>
+  </div>
+  <p>The firmware list is made by ArduPilot's own manifest script, unchanged, so board IDs, USB IDs and bootloader names are exactly the ones ArduPilot publishes. We compared six entries field by field with ArduPilot's official list and found no difference except the download address. When a board matches both an ArduPilot and a Sarus build, Install Firmware opens the selection window Mission Planner already has, and the Sarus files are easy to spot by name. No new buttons were needed.</p>
+  <p>The program loads the list when it starts. A new Sarus release therefore appears the next time Sarus Operation Planner is opened.</p>
+
+  <h2><span class="n">03</span>Next steps</h2>
+  <p>With the simulator tests passed, the first release, <code>sarus-v4.7.1-S1</code>, is ready to be tagged. That needs your approval, because it publishes files. After it, your team flashes the Sarus build on real boards and runs the Field Test Checklist, starting with this identity-only version so that any problem cannot come from a behaviour change.</p>
+  <p>Behaviour changes come only after that, and one per release. The parameter sweeps have already suggested where to start. <code>EK3_BCN_DELAY</code>, <code>EK3_FLOW_DELAY</code> and <code>LAND_THR_SLEW</code> are stored in 8 bits and stop at 127 although their documentation allows more. <code>Q_LOIT_ACC_MAX_M</code> and <code>LOIT_ACC_MAX_M</code> are accepted and then limited inside the firmware. Your flight team will find others. Each change gets its own commit, simulator results from before and after, an entry in <code>SARUS.md</code> and your sign-off.</p>
+  <div class="callout warn"><strong class="t">Safety</strong>
+    <p>Many of ArduPilot's limits protect the aircraft: angle, acceleration and throttle slew limits among them. Removing one moves that protection to the pilot and the tuning. That is the reason for going one limit at a time, with evidence, and never in the first release.</p>
+  </div>
+  <p>Later, the build can grow from seven board families to everything ArduPilot supports, about 1,100 firmware files per release. That is more than one GitHub release can hold, so it would become one release per vehicle type.</p>
+
+  <h2><span class="n">04</span>Decisions taken</h2>
+  <div class="tbl"><table>
+    <tbody>
+      <tr><td>Boards</td><td>The seven families above first, then every board Mission Planner offers</td></tr>
+      <tr><td>Install Firmware</td><td>Sarus builds listed together with ArduPilot's, with no new buttons</td></tr>
+      <tr><td>Repository</td><td>Public fork under LikhitS for now, to move to a company account later</td></tr>
+      <tr><td>Version names</td><td>ArduPilot version plus a Sarus build number, e.g. 4.7.1-S1, so the base is always visible</td></tr>
+      <tr><td>Release types</td><td>Stable (<code>sarus-v4.7.1-S1</code>) and beta (<code>sarus-v4.7.1-S1-beta</code>)</td></tr>
+    </tbody>
+  </table></div>
+
+  <h2><span class="n">05</span>Licensing</h2>
+  <p>ArduPilot is licensed under the GPL version 3. Sarus firmware may be sold or supplied with aircraft, provided that anyone who receives it can get the complete source of the build they received. The public fork does that. Saying the firmware is based on ArduPilot is fine; suggesting ArduPilot endorses it is not.</p>
+
+  <footer>Sarus Aerospace Pvt Ltd · firmware status and plan · 4 October 2026 · base ArduPilot 4.7.1 stable</footer>
+</div>

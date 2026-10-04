@@ -250,6 +250,7 @@ namespace wix
     <DirectoryRef Id=""ApplicationProgramsFolder"">
         <Component Id=""ApplicationShortcut"" Guid=""*"">
             <Shortcut Id=""ApplicationStartMenuShortcut10"" Name=""Sarus Operation Planner"" Description=""Sarus Operation Planner"" Target=""[INSTALLDIR]MissionPlanner.exe"" WorkingDirectory=""INSTALLDIR"" />
+            <Shortcut Id=""SarusUserManual"" Name=""Sarus Operation Planner User Manual"" Description=""User manual (PDF)"" Target=""[INSTALLDIR]docs\Sarus Operation Planner User Manual.pdf"" WorkingDirectory=""INSTALLDIR"" />
             <Shortcut Id=""UninstallProduct"" Name=""Uninstall Sarus Operation Planner"" Description=""Uninstalls Sarus Operation Planner"" Target=""[System64Folder]msiexec.exe"" Arguments=""/x [ProductCode]"" />
             <RegistryValue Root=""HKCU"" Key=""Software\SarusAerospace\SarusOperationPlanner"" Name=""installed"" Type=""integer"" Value=""1"" KeyPath=""yes"" />
 

@@ -139,6 +139,11 @@ jobs:
           $lnk = Get-ChildItem "$env:ProgramData\Microsoft\Windows\Start Menu\Programs", "$env:APPDATA\Microsoft\Windows\Start Menu\Programs" -Recurse -Filter "Sarus Operation Planner*.lnk" -ErrorAction SilentlyContinue
           $lnk | ForEach-Object { "shortcut: $($_.FullName)" }
           if (-not $lnk) { throw "Start menu shortcut missing" }
+          # documents shipped with the program, and the Start-menu entry for the manual
+          foreach ($d in 'Sarus Operation Planner User Manual.pdf', 'Sarus Operation Planner Release Notes.pdf', 'Sarus Field Test Checklist.pdf', 'COPYING.txt') {
+            if (-not (Test-Path "${env:ProgramFiles(x86)}\Sarus Operation Planner\docs\$d")) { throw "docs\$d missing" }
+          }
+          if (-not ($lnk | Where-Object Name -eq 'Sarus Operation Planner User Manual.lnk')) { throw "manual shortcut missing" }
 
       - name: Start Sarus and keep it running
         shell: pwsh

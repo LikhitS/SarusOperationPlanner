@@ -58,6 +58,7 @@
     <Compile Remove="MissionPlannerTests\**" />
     <Compile Remove="SarusTests\**" />
     <Compile Remove="SarusBranding\**" />
+    <Compile Remove="SarusDocs\**" />
     <Compile Remove="Msi\**" />
     <Compile Remove="obj2\**" />
     <Compile Remove="obj\**" />
@@ -73,6 +74,7 @@
     <EmbeddedResource Remove="MissionPlannerTests\**" />
     <EmbeddedResource Remove="SarusTests\**" />
     <EmbeddedResource Remove="SarusBranding\**" />
+    <EmbeddedResource Remove="SarusDocs\**" />
     <EmbeddedResource Remove="Msi\**" />
     <EmbeddedResource Remove="obj2\**" />
     <EmbeddedResource Remove="obj\**" />
@@ -86,6 +88,7 @@
     <None Remove="MissionPlannerTests\**" />
     <None Remove="SarusTests\**" />
     <None Remove="SarusBranding\**" />
+    <None Remove="SarusDocs\**" />
     <None Remove="Msi\**" />
     <None Remove="obj2\**" />
     <None Remove="obj\**" />
@@ -738,6 +741,15 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="SarusLight.mpsystheme">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <!-- Sarus documents shipped with the program (docs folder); the installer adds a Start-menu entry for the manual -->
+    <None Update="Sarus\docs\*.pdf">
+      <Link>docs\%(Filename)%(Extension)</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="COPYING.txt">
+      <Link>docs\COPYING.txt</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <!-- Sarus menu icons: upstream loads light_*/dark_* icon overrides from the program folder -->

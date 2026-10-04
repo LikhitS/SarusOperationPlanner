@@ -1,0 +1,624 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Sarus Operation Planner 1.0.0 - User Manual</title>
+<link rel="stylesheet" href="sarus-print.css">
+<style>@page { @top-left { content: "Sarus Operation Planner · User Manual"; font: 600 8pt "Barlow Semi Condensed", sans-serif; letter-spacing: .08em; text-transform: uppercase; color: #566472; } @bottom-left { content: "SOP-UM-001 · Version 1.0.0 · October 2026"; font: 8pt "Source Sans 3", sans-serif; color: #566472; } }</style>
+</head>
+<body>
+<span class="runtitle">Sarus Operation Planner · User Manual</span>
+<span class="runver">Document SOP-UM-001 · Version 1.0.0 · October 2026</span>
+
+<div class="cover">
+  <div class="top">
+    <img src="logo.svg" alt="Sarus Aerospace logo">
+    <div class="co">Sarus Aerospace<small>Private Limited · India</small></div>
+  </div>
+  <div class="mid">
+    <div class="kind">User manual</div>
+    <h1>Sarus Operation Planner</h1>
+    <p class="sub">Ground control station for ArduPilot aircraft. Installation, specifications, and a complete guide to every screen, feature and keyboard shortcut.</p>
+    <div class="rule"></div>
+  </div>
+  <dl class="meta">
+    <div><dt>Software version</dt><dd>1.0.0</dd></div>
+    <div><dt>Platform</dt><dd>Windows 10 / 11</dd></div>
+    <div><dt>Document</dt><dd>SOP-UM-001</dd></div>
+    <div><dt>Issued</dt><dd>October 2026</dd></div>
+  </dl>
+</div>
+
+<!-- contents -->
+<section class="chapter" id="toc">
+  <h2>Contents</h2>
+  <nav class="toc"><ol>
+    <li><a href="#c1"><span class="n">1</span>Safety and about this manual</a></li>
+    <li><a href="#c2"><span class="n">2</span>Product overview</a></li>
+    <li><a href="#c3"><span class="n">3</span>Specifications and requirements</a></li>
+    <li><a href="#c4"><span class="n">4</span>Installation</a></li>
+    <li><a href="#c5"><span class="n">5</span>First start and the main window</a></li>
+    <li><a href="#c6"><span class="n">6</span>Connecting to an aircraft</a></li>
+    <li><a href="#c7"><span class="n">7</span>DATA – Flight Data screen</a></li>
+    <li><a href="#c8"><span class="n">8</span>PLAN – Flight Planner screen</a></li>
+    <li><a href="#c9"><span class="n">9</span>SETUP – Hardware setup</a></li>
+    <li><a href="#c10"><span class="n">10</span>CONFIG – Software configuration and tuning</a></li>
+    <li><a href="#c11"><span class="n">11</span>Parameter editing in Sarus</a></li>
+    <li><a href="#c12"><span class="n">12</span>SIMULATION</a></li>
+    <li><a href="#c13"><span class="n">13</span>HELP and updates</a></li>
+    <li><a href="#c14"><span class="n">14</span>Keyboard shortcuts</a></li>
+    <li><a href="#c15"><span class="n">15</span>QuadPlane (VTOL) quick-start workflow</a></li>
+    <li><a href="#c16"><span class="n">16</span>Logs and files</a></li>
+    <li><a href="#c17"><span class="n">17</span>Troubleshooting</a></li>
+    <li><a href="#c18"><span class="n">18</span>Privacy, licence and support</a></li>
+    <li><a href="#c19"><span class="n">19</span>Abbreviations</a></li>
+  </ol></nav>
+</section>
+
+<!-- 1 -->
+<section class="chapter cont" id="c1">
+  <h2><span class="n">01</span>Safety and about this manual</h2>
+  <div class="callout danger"><strong class="t">Safety first</strong>
+    <p>Take every propeller off before you calibrate, test motors, change parameters on the bench or install firmware. One wrong parameter is enough to crash an aircraft, so save a backup before each session and change one thing at a time. Even during an AUTO mission, keep the radio control transmitter in your hands, ready to take over. Fly only where and how the law allows; in India that means the Drone Rules 2021 and the DGCA's Digital Sky requirements. The software comes without warranty under the GNU GPL v3, and the operator is responsible for every flight.</p>
+  </div>
+  <p>This manual covers Sarus Operation Planner 1.0.0 for Windows. The program is built on ArduPilot Mission Planner 1.3.83 and keeps every one of its screens, controls and keyboard shortcuts, so Mission Planner tutorials apply here too. What differs is the look, the way parameters are edited (chapter 11), more reliable communication with the aircraft, and where files are kept.</p>
+  <p><b>Conventions:</b> on-screen names are in <span class="ui">bold</span>. Menu paths are written <span class="ui">CONFIG → Full Parameter List</span>. Keys are shown as <kbd>Ctrl</kbd>+<kbd>P</kbd>. Parameter names are in <code>MONOSPACE</code>.</p>
+</section>
+
+<!-- 2 -->
+<section class="chapter" id="c2">
+  <h2><span class="n">02</span>Product overview</h2>
+  <p class="lead">Sarus Operation Planner is a ground control station (GCS): Windows software that connects to a drone's flight controller and lets you set up, plan, fly, monitor and analyse ArduPilot aircraft.</p>
+  <h3>What you can do with it</h3>
+  <p>Before a flight you can install or update the firmware on the flight controller, calibrate the accelerometers, compass, radio and ESCs, set flight modes and failsafes, and tune the aircraft: PIDs, TECS, navigation and the VTOL settings, down to any single parameter. Missions are planned on a map with waypoints, surveys, geofences and rally points.</p>
+  <p>In the air, the DATA screen gives you a live HUD, map, gauges and quick actions, and the program can speak mode changes, altitude and battery warnings. Afterwards you can replay the telemetry, download the flight controller's own log and analyse both. ArduPilot's simulator lets you fly without hardware, and optional equipment such as GPS, airspeed sensors, rangefinders, gimbals, OSD, CAN devices, ADS-B receivers and telemetry radios is set up from the same program.</p>
+  <h3>Supported vehicles</h3>
+  <table>
+    <thead><tr><th>Vehicle</th><th>Firmware</th><th>Sarus test status in 1.0.0</th></tr></thead>
+    <tbody>
+      <tr><td class="k">Fixed wing and QuadPlane (VTOL)</td><td>ArduPilot Plane</td><td>Tested in the simulator</td></tr>
+      <tr><td class="k">Multirotor and helicopter</td><td>ArduPilot Copter</td><td>Multirotor tested in the simulator</td></tr>
+      <tr><td class="k">Rover and boat</td><td>ArduPilot Rover</td><td>Tested in the simulator</td></tr>
+      <tr><td class="k">Submarine, antenna tracker</td><td>ArduSub, AntennaTracker</td><td>Supported as in Mission Planner, not tested by Sarus</td></tr>
+    </tbody>
+  </table>
+  <p>Flight controllers: any board that runs ArduPilot, including Pixhawk-class boards (Pixhawk, Cube, Holybro, Matek, CUAV and others).</p>
+
+  <h3>What is different from Mission Planner</h3>
+  <table>
+    <tbody>
+      <tr><td class="k">Look</td><td>Sarus Dark (default) and Sarus Light themes, Sarus menu icons and logo. HUD and map colours are unchanged.</td></tr>
+      <tr><td class="k">Parameters</td><td>Out-of-range values give an amber warning instead of a blocking question. Read-only values can be changed after confirmation. Every written value is re-read from the aircraft (chapter 11).</td></tr>
+      <tr><td class="k">Reliability</td><td>Replies from the aircraft can no longer be lost when two requests wait at the same time (parameters, commands, missions).</td></tr>
+      <tr><td class="k">Coexistence</td><td>Installs beside Mission Planner with separate settings, logs, maps and updates.</td></tr>
+      <tr><td class="k">Privacy</td><td>Anonymous usage statistics are off by default.</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- 3 -->
+<section class="chapter cont" id="c3">
+  <h2><span class="n">03</span>Specifications and requirements</h2>
+  <h3>Software</h3>
+  <table>
+    <tbody>
+      <tr><td class="k">Product</td><td>Sarus Operation Planner</td></tr>
+      <tr><td class="k">Version</td><td>1.0.0 (file version 1.3.83, the Mission Planner base)</td></tr>
+      <tr><td class="k">Publisher</td><td>Sarus Aerospace Pvt Ltd, India · sarusaerospace.in</td></tr>
+      <tr><td class="k">Based on</td><td>ArduPilot Mission Planner 1.3.83</td></tr>
+      <tr><td class="k">Communication protocol</td><td>MAVLink 1 and 2</td></tr>
+      <tr><td class="k">Connections</td><td>USB/serial (COM ports), TCP, UDP, UDP client, WebSocket</td></tr>
+      <tr><td class="k">Installer</td><td>Windows Installer package (.msi), about 110 MB</td></tr>
+      <tr><td class="k">Licence</td><td>GNU General Public License v3, source at github.com/LikhitS/SarusOperationPlanner</td></tr>
+      <tr><td class="k">Languages</td><td>English, plus the Mission Planner translations (CONFIG → Planner → UI Language)</td></tr>
+    </tbody>
+  </table>
+  <h3>Computer requirements</h3>
+  <table>
+    <thead><tr><th>Item</th><th>Minimum</th><th>Recommended</th></tr></thead>
+    <tbody>
+      <tr><td class="k">Operating system</td><td>Windows 10 (64-bit)</td><td>Windows 11 (64-bit)</td></tr>
+      <tr><td class="k">.NET Framework</td><td>4.7.2 (built into Windows 10 version 1803 and later)</td><td>4.8</td></tr>
+      <tr><td class="k">Processor</td><td>Dual-core, 2 GHz</td><td>Quad-core or better</td></tr>
+      <tr><td class="k">Memory</td><td>4 GB</td><td>8 GB or more</td></tr>
+      <tr><td class="k">Disk</td><td>500 MB plus map cache and logs</td><td>5 GB or more free for maps and logs</td></tr>
+      <tr><td class="k">Display</td><td>1280 × 720</td><td>1920 × 1080, 100% scaling</td></tr>
+      <tr><td class="k">Ports</td><td colspan="2">One USB port for the flight controller or telemetry radio</td></tr>
+      <tr><td class="k">Internet</td><td colspan="2">Optional. Needed for firmware downloads, parameter descriptions, online maps and updates. Flying works offline with cached maps.</td></tr>
+    </tbody>
+  </table>
+  <p class="muted">Above 100% Windows display scaling, text looks slightly soft. This is the same in Mission Planner.</p>
+</section>
+
+<!-- 4 -->
+<section class="chapter cont" id="c4">
+  <h2><span class="n">04</span>Installation</h2>
+  <h3>4.1 Download</h3>
+  <p>Download the latest <code>SarusOperationPlanner-x.y.z.msi</code> from the Sarus releases page: <a href="https://github.com/LikhitS/SarusOperationPlanner/releases">github.com/LikhitS/SarusOperationPlanner/releases</a>, or from the Sarus Aerospace website.</p>
+  <h3>4.2 Install</h3>
+  <ol class="steps">
+    <li>Double-click the downloaded <code>.msi</code> file.</li>
+    <li>If Windows shows <span class="ui">Windows protected your PC</span>, click <span class="ui">More info</span>, check that the file is the one from Sarus, then click <span class="ui">Run anyway</span>. This appears until the installer carries a code signature.</li>
+    <li>Read and accept the licence (GNU GPL v3), then click <span class="ui">Next</span>.</li>
+    <li>Keep the default folder <code>C:\Program Files (x86)\Sarus Operation Planner</code> or choose another, then click <span class="ui">Install</span> and approve the administrator prompt.</li>
+    <li>When Windows asks to install device drivers (for flight-controller USB ports), click <span class="ui">Install</span>. These are the same drivers Mission Planner installs.</li>
+    <li>Click <span class="ui">Finish</span>. Start the program from the Start menu: <span class="ui">Sarus Operation Planner</span>.</li>
+  </ol>
+  <div class="callout"><strong class="t">Silent install (IT departments)</strong>
+    <p><code>msiexec /i SarusOperationPlanner-1.3.83.msi /qn /norestart</code> installs without questions. In a silent install, Windows adds only the USB drivers whose publisher is already trusted; ArduPilot boards on Windows 10/11 normally use the built-in Windows USB serial driver. Uninstall with <code>msiexec /x</code> and the same file, or from Windows Settings → Apps.</p>
+  </div>
+  <h3>4.3 Next to Mission Planner</h3>
+  <p>Sarus Operation Planner and Mission Planner can be installed on the same PC. Each has its own program folder, Start-menu entry, settings, logs, map cache and update channel. Installing or removing one does not affect the other. Only one program can use a given COM port at a time.</p>
+  <h3>4.4 Updating</h3>
+  <p>On start, the program checks the Sarus releases on GitHub. When a new version exists, it offers to update. The updater downloads only the files that changed and verifies each file's checksum. You can also check manually in <span class="ui">HELP → Check for Updates</span>, or install a newer <code>.msi</code> over the current one; settings are kept.</p>
+  <h3>4.5 Uninstalling</h3>
+  <p>Windows Settings → Apps → Installed apps → <span class="ui">Sarus Operation Planner</span> → Uninstall. Your logs, missions and settings in <code>Documents\Sarus Operation Planner</code> are kept; delete that folder by hand if you no longer need them.</p>
+</section>
+
+<!-- 5 -->
+<section class="chapter cont" id="c5">
+  <h2><span class="n">05</span>First start and the main window</h2>
+  <h3>5.1 Questions on first start</h3>
+  <table>
+    <thead><tr><th>Message</th><th>What to do</th></tr></thead>
+    <tbody>
+      <tr><td class="k">Windows Security: allow network access</td><td>Tick <span class="ui">Private networks</span> and click <span class="ui">Allow</span>. This is needed for UDP/TCP telemetry (Wi-Fi radios, SITL, companion computers). USB and serial radios work without it.</td></tr>
+      <tr><td class="k">Altitude Angel plugin</td><td>Altitude Angel provides UK airspace data. Answer <span class="ui">No</span> unless you need it. You can change this later in the Plugins window (<kbd>Ctrl</kbd>+<kbd>P</kbd>).</td></tr>
+      <tr><td class="k">Restart to enable a plugin (for example Drone ID)</td><td>Restart the program if you want the plugin, or disable it in <kbd>Ctrl</kbd>+<kbd>P</kbd> if you do not.</td></tr>
+      <tr><td class="k">Other "show again?" messages</td><td>Informational. Tick "don't show again" if you prefer.</td></tr>
+    </tbody>
+  </table>
+  <h3>5.2 The main window</h3>
+  <figure class="diagram">
+    <svg viewBox="0 0 760 300" xmlns="http://www.w3.org/2000/svg" font-family="Source Sans 3, Segoe UI, sans-serif" font-size="12">
+      <rect x="1" y="1" width="758" height="298" fill="#11161C" stroke="#14202B"/>
+      <rect x="1" y="1" width="758" height="52" fill="#1A2129"/>
+      <g fill="#E7ECF1" font-weight="700" font-size="11" text-anchor="middle">
+        <rect x="12" y="8" width="52" height="38" fill="#232C36"/><text x="38" y="42">DATA</text>
+        <rect x="70" y="8" width="52" height="38" fill="#232C36"/><text x="96" y="42">PLAN</text>
+        <rect x="128" y="8" width="52" height="38" fill="#232C36"/><text x="154" y="42">SETUP</text>
+        <rect x="186" y="8" width="52" height="38" fill="#232C36"/><text x="212" y="42">CONFIG</text>
+        <rect x="244" y="8" width="70" height="38" fill="#232C36"/><text x="279" y="42">SIMULATION</text>
+        <rect x="320" y="8" width="52" height="38" fill="#232C36"/><text x="346" y="42">HELP</text>
+      </g>
+      <rect x="440" y="12" width="90" height="16" fill="#232C36" stroke="#34414E"/><text x="448" y="24" fill="#9AA8B6" font-size="10">COM5 ▾</text>
+      <rect x="440" y="31" width="90" height="16" fill="#232C36" stroke="#34414E"/><text x="448" y="43" fill="#9AA8B6" font-size="10">115200 ▾</text>
+      <text x="537" y="34" fill="#9AA8B6" font-size="10">Stats…</text>
+      <rect x="578" y="8" width="58" height="38" fill="#232C36"/><text x="607" y="42" fill="#E7ECF1" text-anchor="middle" font-weight="700" font-size="11">CONNECT</text>
+      <rect x="648" y="12" width="104" height="30" fill="#0E1620" stroke="#34414E"/><text x="700" y="32" fill="#fff" text-anchor="middle" font-weight="700" font-size="13">SARUS</text>
+      <rect x="10" y="62" width="250" height="120" fill="#2b5aa8"/><rect x="10" y="122" width="250" height="60" fill="#7a5a2a"/><text x="135" y="125" text-anchor="middle" fill="#fff" font-weight="700">HUD</text>
+      <rect x="10" y="188" width="250" height="104" fill="#1A2129" stroke="#34414E"/><text x="135" y="244" text-anchor="middle" fill="#9AA8B6">Tabs: Quick, Actions, Messages…</text>
+      <rect x="268" y="62" width="482" height="230" fill="#2f4a33"/><text x="509" y="182" text-anchor="middle" fill="#fff" font-weight="700">Map</text>
+      <g font-size="11" fill="#B5263A" font-weight="700">
+        <text x="180" y="72">①</text><text x="430" y="72">②</text><text x="570" y="72">③</text><text x="700" y="72">④</text>
+      </g>
+    </svg>
+    <figcaption>Figure 1. Main window on the DATA screen. ① Screen menu ② Connection type and speed ③ Link statistics and CONNECT ④ Sarus logo (opens sarusaerospace.in).</figcaption>
+  </figure>
+  <table>
+    <thead><tr><th>Menu</th><th>Screen</th><th>Use it to</th><th>Key</th></tr></thead>
+    <tbody>
+      <tr><td class="k">DATA</td><td>Flight Data</td><td>Monitor and command the aircraft in flight; replay logs</td><td><kbd>F2</kbd></td></tr>
+      <tr><td class="k">PLAN</td><td>Flight Planner</td><td>Create missions, geofences and rally points</td><td><kbd>F3</kbd></td></tr>
+      <tr><td class="k">SETUP</td><td>Hardware Config</td><td>Install firmware, calibrate, set up hardware</td><td></td></tr>
+      <tr><td class="k">CONFIG</td><td>Software Config</td><td>Tune, edit parameters, program settings</td><td><kbd>F4</kbd></td></tr>
+      <tr><td class="k">SIMULATION</td><td>Simulation</td><td>Fly a simulated aircraft (SITL)</td><td></td></tr>
+      <tr><td class="k">HELP</td><td>Help</td><td>Updates, change log, console window</td><td></td></tr>
+    </tbody>
+  </table>
+  <p>The program remembers its window size, theme and last connection.</p>
+</section>
+
+<!-- 6 -->
+<section class="chapter cont" id="c6">
+  <h2><span class="n">06</span>Connecting to an aircraft</h2>
+  <h3>6.1 Connection types</h3>
+  <table>
+    <thead><tr><th>Type (top-right list)</th><th>Use for</th><th>Usual speed / port</th></tr></thead>
+    <tbody>
+      <tr><td class="k">COMx</td><td>USB cable to the flight controller, or a USB telemetry radio (SiK, RFD900)</td><td>USB: 115200 · SiK radio: 57600</td></tr>
+      <tr><td class="k">AUTO</td><td>Tries the available COM ports and speeds automatically</td><td>–</td></tr>
+      <tr><td class="k">TCP</td><td>Network link to an aircraft, a companion computer or SITL</td><td>e.g. 127.0.0.1:5760</td></tr>
+      <tr><td class="k">UDP</td><td>Listen for an aircraft broadcasting telemetry (Wi-Fi radios, Herelink, SITL)</td><td>14550</td></tr>
+      <tr><td class="k">UDPCl</td><td>Send to a fixed address and port (UDP client)</td><td>host and port</td></tr>
+      <tr><td class="k">WS</td><td>WebSocket link</td><td>URL</td></tr>
+    </tbody>
+  </table>
+  <h3>6.2 Connect</h3>
+  <ol class="steps">
+    <li>Plug in the flight controller (USB) or the ground telemetry radio, and power the aircraft.</li>
+    <li>Choose the COM port (or TCP/UDP) and the speed in the top-right lists.</li>
+    <li>Click <span class="ui">CONNECT</span> or press <kbd>F12</kbd>.</li>
+    <li>The program waits for a heartbeat, then downloads all parameters (a progress window shows this). When it finishes, the HUD moves and the title bar shows the firmware version.</li>
+  </ol>
+  <p>Click <span class="ui">DISCONNECT</span> (or <kbd>F12</kbd> again) to disconnect. <kbd>Ctrl</kbd>+<kbd>T</kbd> connects without downloading the parameters (advanced). <span class="ui">Stats…</span> under the connection lists shows link quality, bytes per second and packet loss.</p>
+  <p>With several aircraft or components on one link, choose which one to control from the system-ID list that appears in the connection area.</p>
+</section>
+
+<!-- 7 -->
+<section class="chapter" id="c7">
+  <h2><span class="n">07</span>DATA – Flight Data screen</h2>
+  <p>This is the screen you fly from. The HUD sits at the top left, the tabs below it and the map on the right; drag the dividers to change the proportions.</p>
+  <h3>7.1 HUD (head-up display)</h3>
+  <p>The HUD draws the artificial horizon with roll and pitch, plus heading, airspeed and ground speed (left tape), altitude (right tape), vertical speed, flight mode, armed state, GPS status, battery, link quality, distance to waypoint and current waypoint, plus warnings such as PreArm messages, EKF problems and low battery. HUD colours are those of Mission Planner.</p>
+  <p><b>Right-click the HUD</b> for: <span class="ui">Video</span> (start a camera, MJPEG or GStreamer source, Herelink video, record HUD to AVI), <span class="ui">Set Aspect Ratio</span>, <span class="ui">User Items</span> (add any telemetry value to the HUD), <span class="ui">Swap With Map</span>, <span class="ui">Ground Color</span>, <span class="ui">Battery Cell Voltage</span>, <span class="ui">Show icons</span> and <span class="ui">Russian Hud</span>.</p>
+  <h3>7.2 Tabs</h3>
+  <p>Press <kbd>Ctrl</kbd>+<kbd>1</kbd> to <kbd>Ctrl</kbd>+<kbd>0</kbd> to jump to the 1st to 10th visible tab. Right-click a tab strip to choose which tabs are shown.</p>
+  <table>
+    <thead><tr><th>Tab</th><th>Contents</th></tr></thead>
+    <tbody>
+      <tr><td class="k">Quick</td><td>Large-number display of selected values (altitude, speed, distance, yaw, vertical speed…). Double-click a value to choose another. Right-click to set the number of values, or undock.</td></tr>
+      <tr><td class="k">Actions</td><td>Do Action (any command) · Set WP · Set Mode · Set Mount · Arm/Disarm · Auto · Loiter · RTL · Restart Mission · Resume Mission · Abort Landing · Set Home Alt · Clear Track · Raw Sensor View · Joystick · Message · Change Speed · Change Alt</td></tr>
+      <tr><td class="k">Messages</td><td>All text messages from the aircraft, with time stamps (PreArm, EKF, mode changes, errors)</td></tr>
+      <tr><td class="k">Actions (simple)</td><td>Reduced set of large action buttons</td></tr>
+      <tr><td class="k">PreFlight</td><td>Configurable pre-flight checklist with live checks</td></tr>
+      <tr><td class="k">Gauges</td><td>Analogue speed, altitude, vertical-speed and heading gauges</td></tr>
+      <tr><td class="k">Transponder</td><td>ADS-B transponder control: squawk, flight ID, IDENT, mode (STBY / ON / ALT)</td></tr>
+      <tr><td class="k">Status</td><td>Every telemetry value the program receives, in one list</td></tr>
+      <tr><td class="k">Servo/Relay</td><td>Toggle relays and drive servo outputs (low / high / toggle)</td></tr>
+      <tr><td class="k">Aux Function</td><td>Trigger ArduPilot auxiliary functions (as an RC switch would)</td></tr>
+      <tr><td class="k">Scripts</td><td>Run Python scripts on the ground station</td></tr>
+      <tr><td class="k">Payload Control</td><td>Gimbal roll, pitch and pan, video control, reset position</td></tr>
+      <tr><td class="k">Telemetry Logs</td><td>Load and replay a <code>.tlog</code> (Play/Pause, speed 0.1× to 10×, slider), convert tlog to KML or graph</td></tr>
+      <tr><td class="k">DataFlash Logs</td><td>Download DataFlash Log Via Mavlink · Review a Log · Auto Analysis · Create KML + gpx · Convert .Bin to .Log · Create Matlab File · Geo Reference Images</td></tr>
+    </tbody>
+  </table>
+  <h3>7.3 Map</h3>
+  <p>On the map you see the aircraft and its track, home, the mission, geofence, rally points, ADS-B traffic and the planned path. Scroll to zoom; drag to pan. Hold <kbd>Ctrl</kbd> and click the map to send the aircraft there (same as <span class="ui">Fly To Here</span>, guided mode).</p>
+  <p><b>Right-click the map:</b> <span class="ui">Fly To Here</span> · <span class="ui">Fly To Here Alt</span> · <span class="ui">Fly To Coords</span> · <span class="ui">TakeOff</span> · <span class="ui">Add Poi</span> · <span class="ui">Point Camera Here</span> / <span class="ui">Point Camera Coords</span> · <span class="ui">Trigger Camera NOW</span> · <span class="ui">Set Home Here</span> · <span class="ui">Set EKF Origin Here</span> · <span class="ui">Flight Planner</span> · <span class="ui">Camera Overlap</span> · <span class="ui">Jump To Tag</span>. Checkboxes under the map control <span class="ui">Auto Pan</span>, <span class="ui">Tuning</span> (live graph of selected values) and the zoom level.</p>
+  <div class="callout warn"><strong class="t">Guided commands</strong><p>Fly To Here changes the aircraft to GUIDED mode. Check the altitude before you send it.</p></div>
+  <h3>7.4 Log playback keys</h3>
+  <p>While a telemetry log is loaded: <kbd>Space</kbd> plays or pauses, numeric-keypad <kbd>+</kbd> speeds up and <kbd>−</kbd> slows down.</p>
+</section>
+
+<!-- 8 -->
+<section class="chapter cont" id="c8">
+  <h2><span class="n">08</span>PLAN – Flight Planner screen</h2>
+  <p>Missions, geofences and rally points are created, loaded and sent from here. The map takes most of the screen, with the mission table along the bottom and the action panel on the right.</p>
+  <h3>8.1 Making a mission</h3>
+  <ol class="steps">
+    <li>Check <span class="ui">Home Location</span> (filled in from the aircraft when connected).</li>
+    <li>Set the defaults: <span class="ui">WP Radius</span>, <span class="ui">Loiter Radius</span>, <span class="ui">Default Alt</span>, and the altitude frame (<span class="ui">Relative</span>, <span class="ui">Absolute</span> or <span class="ui">Terrain</span>). Tick <span class="ui">Verify Height</span> to use terrain data.</li>
+    <li>Left-click the map to add waypoints. Drag a waypoint to move it.</li>
+    <li>In the table, change each row's <span class="ui">Command</span> (WAYPOINT, VTOL_TAKEOFF, VTOL_LAND, LOITER_TURNS, DO_JUMP, DO_SET_SERVO, DO_CHANGE_SPEED…) and its parameters, latitude, longitude and altitude. The column headers change to explain the parameters of the selected command. Use the arrows to reorder and <span class="ui">X</span> to delete.</li>
+    <li>Click <span class="ui">Write</span> (<kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>W</kbd>) to send the mission to the aircraft, then <span class="ui">Read</span> (<kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>R</kbd>) to confirm it. <span class="ui">Write Fast</span> (<kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>F</kbd>) sends without waiting for each item.</li>
+    <li>Save the mission with <kbd>Ctrl</kbd>+<kbd>S</kbd>; open one with <kbd>Ctrl</kbd>+<kbd>O</kbd>. <kbd>Ctrl</kbd>+<kbd>Z</kbd> undoes the last change.</li>
+  </ol>
+  <p>The status bar shows total distance, distance between points, and an <span class="ui">Alt Warn</span> indication. Use <span class="ui">Elevation Graph</span> (right-click) to check terrain clearance.</p>
+
+  <h3>8.2 Right-click menu on the map</h3>
+  <table>
+    <tbody>
+      <tr><td class="k">Insert / Delete</td><td>Insert Wp · Insert Spline WP · Delete WP · Add Below</td></tr>
+      <tr><td class="k">Loiter, Jump, RTL, Land, Takeoff</td><td>Add a loiter (Forever, Time, Circles), a jump (Start, WP #), RTL, Land or Takeoff command at the clicked point</td></tr>
+      <tr><td class="k">DO_SET_ROI</td><td>Point the camera or vehicle at a location</td></tr>
+      <tr><td class="k">Clear Mission</td><td>Remove all waypoints (on screen only until you Write)</td></tr>
+      <tr><td class="k">Draw a Polygon</td><td>Draw, clear, save or load a polygon; from SHP or from current waypoints; offset; show its area</td></tr>
+      <tr><td class="k">Geo-Fence</td><td>Upload, download, set return location, load from or save to file, clear; inclusion and exclusion fences</td></tr>
+      <tr><td class="k">Rally Points</td><td>Set rally point, upload, download, save to or load from file, clear</td></tr>
+      <tr><td class="k">Auto WP</td><td>Survey (Grid) · Create Circle Survey · Create Wp Circle · Create Spline Circle · Text</td></tr>
+      <tr><td class="k">Map Tool</td><td>Measure Distance · Rotate Map · Zoom To · Prefetch (download map tiles for offline use) · Prefetch WP Path · KML Overlay · Elevation Graph · Reverse WPs · Modify Alt · Enter UTM Coord · GDAL opacity</td></tr>
+      <tr><td class="k">File Load/Save</td><td>Load WP File · Load and Append · Save WP File · Load KML File · Load SHP File</td></tr>
+      <tr><td class="k">POI</td><td>Add, delete, edit points of interest</td></tr>
+      <tr><td class="k">Other</td><td>Set Home Here · Tracker Home · Switch Docking · Zoom to Vehicle / Mission / Home</td></tr>
+    </tbody>
+  </table>
+  <p><b>Selecting several waypoints:</b> hold <kbd>Ctrl</kbd> and drag a box, or <kbd>Ctrl</kbd>+click markers; then drag to move them together.</p>
+  <p><b>Geofence and rally editing:</b> use the drop-down on the right of the screen (<span class="ui">MISSION</span> / <span class="ui">FENCE</span> / <span class="ui">RALLY</span>) to edit those lists with the same table and map tools. Fence points can be inclusion or exclusion zones (polygons or circles).</p>
+  <p><b>Map type:</b> choose the map provider from the list on the right. <kbd>Ctrl</kbd>+<kbd>X</kbd> opens the map cache manager.</p>
+</section>
+
+<!-- 9 -->
+<section class="chapter" id="c9">
+  <h2><span class="n">09</span>SETUP – Hardware setup</h2>
+  <p>The pages are listed on the left. Those that need a connected aircraft stay greyed out until you connect.</p>
+  <h3>9.1 Install Firmware</h3>
+  <ol class="steps">
+    <li><b>Disconnect</b> (do not press CONNECT). Plug the flight controller into USB.</li>
+    <li>Open <span class="ui">SETUP → Install Firmware</span>. The page shows the latest release for each vehicle (Plane, Copter, Heli, Rover, Sub, Antenna Tracker). It reads ArduPilot's live firmware list together with the Sarus firmware list, so new releases of either appear the next time the program starts.</li>
+    <li>Click the vehicle (for a QuadPlane: <b>Plane</b>). For Copter, choose the frame type when asked. If both an ArduPilot and a Sarus build exist for your board, a selection window lists them by file address; the Sarus files are the ones whose names start with <code>Sarus-</code>.</li>
+    <li>Follow the prompts (unplug and replug the board if asked). Wait for "Upload Done". Never unplug during flashing.</li>
+  </ol>
+  <p><span class="ui">All Options</span> lists every version and board. <span class="ui">Beta firmwares</span> offers test releases. <span class="ui">Load custom firmware</span> flashes a <code>.apj</code> file you built or were given. <span class="ui">Bootloader Update</span> / <span class="ui">Force Bootloader</span> update the board's bootloader (advanced). <span class="ui">Install Firmware Legacy</span> is the older version of this page.</p>
+
+  <h3>9.2 Mandatory Hardware</h3>
+  <table>
+    <tbody>
+      <tr><td class="k">Frame Type</td><td>Copter frame class and type (Quad X, Hexa…). For QuadPlane, set <code>Q_FRAME_CLASS</code> / <code>Q_FRAME_TYPE</code> in the parameter list.</td></tr>
+      <tr><td class="k">Accel Calibration</td><td>Calibrate Accel (six positions: level, left, right, nose down, nose up, back), Calibrate Level, Simple Accel Cal</td></tr>
+      <tr><td class="k">Compass</td><td>Priority order, enable/disable compasses, orientation, Onboard Mag Calibration (rotate the aircraft on all axes until done), Large Vehicle MagCal</td></tr>
+      <tr><td class="k">Radio Calibration</td><td>Move all sticks and switches to their ends; Click when Done. Check each channel moves the right way.</td></tr>
+      <tr><td class="k">Servo Output</td><td>Function, min, trim, max and reverse for each output</td></tr>
+      <tr><td class="k">Serial Ports</td><td>Protocol and baud rate for each serial port</td></tr>
+      <tr><td class="k">ESC Calibration</td><td>ESC calibration and motor PWM type (Copter)</td></tr>
+      <tr><td class="k">Flight Modes</td><td>Six modes for the mode switch; current mode and PWM shown live; Save Modes</td></tr>
+      <tr><td class="k">FailSafe</td><td>Radio, battery (low and critical voltage / mAh) and GCS failsafes and their actions; live RC input and output display</td></tr>
+      <tr><td class="k">Initial Tune Parameter</td><td>Starting values from propeller size, battery cells and voltages (Copter)</td></tr>
+      <tr><td class="k">HW ID</td><td>Hardware IDs of the connected sensors</td></tr>
+      <tr><td class="k">ADSB</td><td>ADS-B receiver setup</td></tr>
+    </tbody>
+  </table>
+  <h3>9.3 Optional Hardware</h3>
+  <p>RTK/GPS Inject (RTCM corrections) · Sik Radio (configure SiK telemetry radios) · CubeID Update · CAN GPS Order · Battery Monitor and Battery Monitor 2 · DroneCAN/UAVCAN · Joystick · Compass/Motor Calib · Range Finder · Airspeed · PX4Flow · Optical Flow · OSD · Camera Gimbal · Antenna tracker · Motor Test · Bluetooth Setup · Parachute · ESP8266 Setup · FFT Setup.</p>
+  <div class="callout warn"><strong class="t">Motor Test</strong><p>Props off. Set <span class="ui">Throttle %</span> (start at 5%) and <span class="ui">Duration</span>, then test each motor. Check the order and direction against your frame diagram. <span class="ui">Set Motor Spin Arm</span> and <span class="ui">Set Motor Spin Min</span> set the spin-when-armed and minimum-flying outputs.</p></div>
+  <h3>9.4 Advanced</h3>
+  <p><span class="ui">Terminal</span> (text console to the board or a companion computer) and <span class="ui">Script REPL</span> (interactive Lua on the flight controller).</p>
+</section>
+
+<!-- 10 -->
+<section class="chapter cont" id="c10">
+  <h2><span class="n">10</span>CONFIG – Software configuration and tuning</h2>
+  <table>
+    <thead><tr><th>Page</th><th>Contents</th></tr></thead>
+    <tbody>
+      <tr><td class="k">Flight Modes</td><td>Same as SETUP → Flight Modes</td></tr>
+      <tr><td class="k">GeoFence</td><td>Fence enable, type, action, maximum altitude, radius</td></tr>
+      <tr><td class="k">Basic Tuning</td><td>Simple sliders for responsiveness (Copter); key rates and limits (Plane)</td></tr>
+      <tr><td class="k">Extended Tuning</td><td>Copter: rate and angle PIDs, navigation. Plane: servo roll/pitch/yaw PIDs, L1 turn control, <b>TECS</b> (climb max, sink min, sink max, time constant, damping), airspeed, throttle and navigation angles</td></tr>
+      <tr><td class="k">QP Extended Tuning</td><td>QuadPlane VTOL PIDs and navigation (Q_ parameters), shown for Plane with QuadPlane enabled</td></tr>
+      <tr><td class="k">Standard Params / Advanced Params</td><td>Parameters with descriptions, units, ranges and drop-down choices</td></tr>
+      <tr><td class="k">Onboard OSD</td><td>Arrange items on the on-screen display</td></tr>
+      <tr><td class="k">MAVFtp</td><td>Browse files on the flight controller's SD card: download, upload, delete (logs, Lua scripts, terrain)</td></tr>
+      <tr><td class="k">User Params</td><td>Your own short list of parameters to edit</td></tr>
+      <tr><td class="k">Full Parameter List</td><td>Every parameter in a searchable table (chapter 11)</td></tr>
+      <tr><td class="k">Planner</td><td>Program settings (below)</td></tr>
+    </tbody>
+  </table>
+  <h3>10.1 Planner settings</h3>
+  <table>
+    <tbody>
+      <tr><td class="k">Display</td><td>Theme (Sarus Dark, Sarus Light, Mission Planner themes, Custom) · Layout (Basic / Advanced) · UI Language · HUD options · Speed, distance and altitude units</td></tr>
+      <tr><td class="k">Speech</td><td>Enable Speech; spoken mode, waypoint, battery warning, altitude, arm/disarm, 30-second interval message; Only when Armed</td></tr>
+      <tr><td class="k">Map</td><td>Map Follow, map rotated to follow the plane, track length, aircraft icon, COG, heading, nav bearing, turn radius, target, ADS-B, airports, TFRs, no-fly zones, map access mode, open map cache</td></tr>
+      <tr><td class="k">Telemetry Rates</td><td>Requested rates for attitude, position, mode/status, RC and sensors (lower on slow radios)</td></tr>
+      <tr><td class="k">Connection</td><td>Reset on USB connect (DTR), GCS ID, params download in background, load waypoints on connect, slow-computer mode</td></tr>
+      <tr><td class="k">Other</td><td>Log path · Video device · Joystick setup · Beta Updates · OptOut Anon Stats (ticked by default in Sarus) · Password Protect Config · Testing Screen · Mavlink Message Debug</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- 11 -->
+<section class="chapter" id="c11">
+  <h2><span class="n">11</span>Parameter editing in Sarus</h2>
+  <p>Open <span class="ui">CONFIG → Full Parameter List</span>. Every parameter is shown with its value, units, recommended range, and description.</p>
+  <h3>11.1 Buttons</h3>
+  <table>
+    <tbody>
+      <tr><td class="k">Write Params</td><td>Send all changed values (highlighted) to the aircraft</td></tr>
+      <tr><td class="k">Refresh Params</td><td>Download all values from the aircraft again (<kbd>F5</kbd> anywhere)</td></tr>
+      <tr><td class="k">Save to file / Load from file</td><td>Save all values to a <code>.param</code> file; load a file (loaded values are marked as changed until you Write)</td></tr>
+      <tr><td class="k">Compare Params</td><td>Compare the aircraft with a file and choose which values to take</td></tr>
+      <tr><td class="k">Load Presaved</td><td>Load a ready-made parameter set for a known frame</td></tr>
+      <tr><td class="k">Reset to Default</td><td>Reset all parameters to firmware defaults (the aircraft must be recalibrated)</td></tr>
+      <tr><td class="k">Commit Params</td><td>Hidden by default. Tells the aircraft to store written values permanently (same as <kbd>Ctrl</kbd>+<kbd>Y</kbd>)</td></tr>
+      <tr><td class="k">Search · Modified</td><td>Filter by name or description · show only values you have changed and not yet written</td></tr>
+    </tbody>
+  </table>
+  <h3>11.2 Sarus behaviour</h3>
+  <table>
+    <thead><tr><th>Situation</th><th>What Sarus does</th></tr></thead>
+    <tbody>
+      <tr><td class="k">Value outside the recommended range</td><td>The value is accepted. The cell turns <b style="color:#B7791F">amber</b> and its tooltip shows the recommended range. Nothing is blocked; you decide.</td></tr>
+      <tr><td class="k">Read-only parameter</td><td>A warning asks you to confirm. If you choose Yes, the value is sent.</td></tr>
+      <tr><td class="k">After Write Params</td><td>Sarus re-reads every written value from the aircraft. If the aircraft limited, rounded or rejected a value, the window <span class="ui">Values changed by aircraft</span> lists it, and the table shows the value the aircraft actually uses.</td></tr>
+    </tbody>
+  </table>
+  <div class="callout"><strong class="t">Known firmware behaviours</strong>
+    <p>ArduPilot does not always keep what it acknowledges. While the loiter controller is running, in QLOITER for example, it caps <code>Q_LOIT_ACC_MAX_M</code> and <code>LOIT_ACC_MAX_M</code> at what the maximum lean angle allows; 9.81 then becomes about 5.66. <code>EK3_BCN_DELAY</code>, <code>EK3_FLOW_DELAY</code> and <code>LAND_THR_SLEW</code> are stored in 8 bits and stop at 127. The firmware overwrites <code>BARO*_GND_PRESS</code> on its own, and <code>MIS_TOTAL</code> cannot be written at all. Some settings, <code>Q_ENABLE</code>, the frame class and the serial protocols among them, only take effect after the flight controller has been rebooted and the parameters refreshed with <kbd>F5</kbd>. In each of these cases Sarus shows you the value the aircraft actually holds.</p>
+  </div>
+  <div class="callout warn"><strong class="t">Good practice</strong><p>Save to file before you change anything. Change a few values at a time. After a tuning session, save again with a descriptive file name and date.</p></div>
+</section>
+
+<!-- 12 -->
+<section class="chapter cont" id="c12">
+  <h2><span class="n">12</span>SIMULATION</h2>
+  <p>The simulator runs ArduPilot's real firmware (SITL) on your PC, so you can fly without any hardware. We use it for training, for rehearsing missions and for trying out parameter changes before they go near an aircraft.</p>
+  <ol class="steps">
+    <li>Drag the <span class="ui">Home Location</span> marker to where you want to fly, and set the heading.</li>
+    <li>Choose a vehicle: <span class="ui">Plane</span>, <span class="ui">Multirotor</span>, <span class="ui">Helicopter</span> or <span class="ui">Rover</span>. For a QuadPlane, open the advanced options and choose a quadplane model.</li>
+    <li>The firmware is downloaded and started; the program connects automatically.</li>
+  </ol>
+  <p>Advanced options: <span class="ui">Model</span>, <span class="ui">Sim Speed</span>, <span class="ui">Wipe</span> (reset parameters), <span class="ui">Extra command line</span>, and swarm modes (several simulated aircraft).</p>
+</section>
+
+<!-- 13 -->
+<section class="chapter cont" id="c13">
+  <h2><span class="n">13</span>HELP and updates</h2>
+  <p><span class="ui">Check for Updates</span> · <span class="ui">Check for BETA Updates</span> · <span class="ui">Change Log</span> (opens the Sarus release notes) · <span class="ui">Show Console Window (restart)</span> (shows diagnostic output, useful for support).</p>
+</section>
+
+<!-- 14 -->
+<section class="chapter" id="c14">
+  <h2><span class="n">14</span>Keyboard shortcuts</h2>
+  <p>Every shortcut works exactly as in Mission Planner. The list below was taken from the Sarus source code, and the automated tests press each one.</p>
+  <h3>Anywhere in the program</h3>
+  <table>
+    <thead><tr><th>Keys</th><th>Action</th></tr></thead>
+    <tbody>
+      <tr><td class="k"><kbd>F2</kbd></td><td>DATA (Flight Data) screen</td></tr>
+      <tr><td class="k"><kbd>F3</kbd></td><td>PLAN (Flight Planner) screen</td></tr>
+      <tr><td class="k"><kbd>F4</kbd></td><td>CONFIG (Software Config) screen</td></tr>
+      <tr><td class="k"><kbd>F5</kbd></td><td>Refresh all parameters from the aircraft and reload the current screen</td></tr>
+      <tr><td class="k"><kbd>F12</kbd></td><td>Connect / disconnect</td></tr>
+      <tr><td class="k"><kbd>Ctrl</kbd>+<kbd>F</kbd></td><td>Advanced tools window (special functions and test tools)</td></tr>
+      <tr><td class="k"><kbd>Ctrl</kbd>+<kbd>P</kbd></td><td>Plugins: enable or disable plugins</td></tr>
+      <tr><td class="k"><kbd>Ctrl</kbd>+<kbd>G</kbd></td><td>NMEA output: send the aircraft position as GPS NMEA to a serial port</td></tr>
+      <tr><td class="k"><kbd>Ctrl</kbd>+<kbd>X</kbd></td><td>Map cache manager</td></tr>
+      <tr><td class="k"><kbd>Ctrl</kbd>+<kbd>L</kbd></td><td>Spectrogram (vibration / FFT view)</td></tr>
+      <tr><td class="k"><kbd>Ctrl</kbd>+<kbd>W</kbd></td><td>Radio propagation (coverage) settings</td></tr>
+      <tr><td class="k"><kbd>Ctrl</kbd>+<kbd>Z</kbd></td><td>Camera test (outside PLAN; on PLAN it is Undo)</td></tr>
+      <tr><td class="k"><kbd>Ctrl</kbd>+<kbd>T</kbd></td><td>Connect without downloading parameters</td></tr>
+      <tr><td class="k"><kbd>Ctrl</kbd>+<kbd>Y</kbd></td><td>Tell the aircraft to save its parameters to permanent storage</td></tr>
+      <tr><td class="k"><kbd>Ctrl</kbd>+<kbd>J</kbd></td><td>DevOps window (developer diagnostics)</td></tr>
+    </tbody>
+  </table>
+  <div class="two">
+    <div class="keep">
+      <h3>DATA screen</h3>
+      <table>
+        <tbody>
+          <tr><td class="k"><kbd>Ctrl</kbd>+<kbd>1</kbd> … <kbd>0</kbd></td><td>Select tab 1 to 10</td></tr>
+          <tr><td class="k"><kbd>Space</kbd></td><td>Play / pause log playback</td></tr>
+          <tr><td class="k">Keypad <kbd>+</kbd> / <kbd>−</kbd></td><td>Faster / slower playback</td></tr>
+          <tr><td class="k"><kbd>Ctrl</kbd>+click map</td><td>Fly To Here</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="keep">
+      <h3>PLAN screen</h3>
+      <table>
+        <tbody>
+          <tr><td class="k"><kbd>Ctrl</kbd>+<kbd>Z</kbd></td><td>Undo</td></tr>
+          <tr><td class="k"><kbd>Ctrl</kbd>+<kbd>O</kbd> / <kbd>S</kbd></td><td>Open / save mission file</td></tr>
+          <tr><td class="k"><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>W</kbd></td><td>Write mission</td></tr>
+          <tr><td class="k"><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>F</kbd></td><td>Write Fast</td></tr>
+          <tr><td class="k"><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>R</kbd></td><td>Read mission</td></tr>
+          <tr><td class="k"><kbd>Ctrl</kbd>+<kbd>N</kbd></td><td>Toggle map drawing mode (GDI)</td></tr>
+          <tr><td class="k"><kbd>Ctrl</kbd>+<kbd>M</kbd></td><td>Copy the plan into the program's mission memory (no upload)</td></tr>
+          <tr><td class="k"><kbd>Ctrl</kbd>+drag / click</td><td>Select several waypoints</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- 15 -->
+<section class="chapter" id="c15">
+  <h2><span class="n">15</span>QuadPlane (VTOL) quick-start workflow</h2>
+  <p>A suggested order for setting up a new QuadPlane. Props off until step 10.</p>
+  <ol class="steps">
+    <li><b>Firmware:</b> SETUP → Install Firmware → Plane.</li>
+    <li><b>Connect</b> over USB (115200) and let parameters download.</li>
+    <li><b>Enable QuadPlane:</b> set <code>Q_ENABLE</code> = 1 in the Full Parameter List, Write, reboot the board, press <kbd>F5</kbd>. Set <code>Q_FRAME_CLASS</code> and <code>Q_FRAME_TYPE</code>, Write, reboot.</li>
+    <li><b>Outputs:</b> SETUP → Servo Output: assign motors 1–4, aileron, elevator, rudder and throttle functions; check reverse settings.</li>
+    <li><b>Calibrate:</b> Accel Calibration, Compass, Radio Calibration. Calibrate the airspeed sensor (Optional Hardware → Airspeed).</li>
+    <li><b>Flight modes:</b> include QHOVER, QLOITER, FBWA and a return mode (RTL/QRTL).</li>
+    <li><b>Failsafes:</b> radio, battery and GCS failsafes, with VTOL-appropriate actions.</li>
+    <li><b>Motor Test</b> at 5%: order and direction for each VTOL motor; check surfaces move correctly in FBWA by hand.</li>
+    <li><b>Save a parameter file</b> as your baseline.</li>
+    <li><b>First flight:</b> follow the Sarus Field Test Checklist (QHOVER → QLOITER → transition → TECS check → small AUTO mission with VTOL_TAKEOFF and VTOL_LAND).</li>
+    <li><b>Tune</b> with CONFIG → Extended Tuning (TECS), QP Extended Tuning, and the Full Parameter List; review logs after each flight.</li>
+  </ol>
+  <h3>Key QuadPlane and TECS parameters</h3>
+  <table>
+    <thead><tr><th>Parameter</th><th>Meaning</th></tr></thead>
+    <tbody>
+      <tr><td class="k"><code>Q_ENABLE</code></td><td>Turn QuadPlane support on</td></tr>
+      <tr><td class="k"><code>Q_FRAME_CLASS / Q_FRAME_TYPE</code></td><td>VTOL motor layout</td></tr>
+      <tr><td class="k"><code>Q_ASSIST_SPEED</code></td><td>Below this airspeed, VTOL motors help in fixed-wing modes</td></tr>
+      <tr><td class="k"><code>ARSPD_FBW_MIN / ARSPD_FBW_MAX</code></td><td>Minimum and maximum airspeed in fixed-wing flight</td></tr>
+      <tr><td class="k"><code>Q_TRANSITION_MS</code></td><td>Time to transition from VTOL to forward flight</td></tr>
+      <tr><td class="k"><code>TECS_CLMB_MAX</code></td><td>Maximum climb rate (m/s)</td></tr>
+      <tr><td class="k"><code>TECS_SINK_MIN / TECS_SINK_MAX</code></td><td>Minimum and maximum sink rate (m/s)</td></tr>
+      <tr><td class="k"><code>TECS_TIME_CONST</code></td><td>How quickly TECS corrects height and speed errors</td></tr>
+      <tr><td class="k"><code>TECS_SPDWEIGHT</code></td><td>Priority between speed and height</td></tr>
+      <tr><td class="k"><code>Q_RTL_MODE</code>, <code>Q_OPTIONS</code></td><td>VTOL return and landing behaviour, options</td></tr>
+    </tbody>
+  </table>
+  <p class="muted">Parameter names change between ArduPilot versions. Always check the description shown in the Full Parameter List for your firmware.</p>
+</section>
+
+<!-- 16 -->
+<section class="chapter cont" id="c16">
+  <h2><span class="n">16</span>Logs and files</h2>
+  <table>
+    <thead><tr><th>What</th><th>Where</th></tr></thead>
+    <tbody>
+      <tr><td class="k">Telemetry logs (.tlog, .rlog)</td><td><code>Documents\Sarus Operation Planner\logs\&lt;vehicle&gt;\&lt;id&gt;\</code>, one per connection, recorded automatically</td></tr>
+      <tr><td class="k">Downloaded DataFlash logs (.bin)</td><td>Same logs folder</td></tr>
+      <tr><td class="k">Program settings</td><td><code>Documents\Sarus Operation Planner\config.xml</code></td></tr>
+      <tr><td class="k">Map cache, terrain (SRTM)</td><td><code>Documents\Sarus Operation Planner\gmapcache</code>, <code>\srtm</code></td></tr>
+      <tr><td class="k">Program diagnostic log</td><td><code>C:\ProgramData\Sarus Operation Planner\SarusOperationPlanner.log</code></td></tr>
+      <tr><td class="k">Program files</td><td><code>C:\Program Files (x86)\Sarus Operation Planner\</code></td></tr>
+    </tbody>
+  </table>
+  <p>The log folder can be changed in CONFIG → Planner → Log Path. The installer registers <code>.tlog</code>, <code>.bin</code> and <code>.log</code> files, so you can open them with Sarus Operation Planner from Windows Explorer (right-click → Open with).</p>
+  <h3>Telemetry logs and DataFlash logs</h3>
+  <p>The <b>telemetry log</b> (.tlog) holds what the ground station received over the radio and can be replayed on the DATA screen. The flight controller writes its own <b>DataFlash log</b> (.bin), at full rate and with far more detail; download it after flight (DATA → DataFlash Logs) and open it with <span class="ui">Review a Log</span> to plot values, or use <span class="ui">Auto Analysis</span>.</p>
+</section>
+
+<!-- 17 -->
+<section class="chapter cont" id="c17">
+  <h2><span class="n">17</span>Troubleshooting</h2>
+  <table>
+    <thead><tr><th>Problem</th><th>What to check</th></tr></thead>
+    <tbody>
+      <tr><td class="k">No COM port in the list</td><td>Cable is a data cable; drivers installed (reinstall Sarus); try another USB port; check Windows Device Manager.</td></tr>
+      <tr><td class="k">"No heartbeat" / connection timeout</td><td>Correct port and speed (USB 115200, SiK 57600); the port is not used by Mission Planner or another program; radios are paired and powered.</td></tr>
+      <tr><td class="k">Parameter download stops</td><td>Weak radio link: move closer or use USB, or reduce telemetry rates (CONFIG → Planner). Press <kbd>F5</kbd> to retry.</td></tr>
+      <tr><td class="k">Cannot arm</td><td>Read the PreArm message on the HUD or in the Messages tab and fix its cause; never disable arming checks to fly.</td></tr>
+      <tr><td class="k">"Values changed by aircraft"</td><td>The firmware limited or rejected a value. The table shows the real value. See chapter 11.2.</td></tr>
+      <tr><td class="k">Firmware page empty</td><td>Internet connection needed; disconnect from the aircraft first.</td></tr>
+      <tr><td class="k">Map is grey</td><td>No internet and no cached tiles for that area. Prefetch maps before going to the field (PLAN → right-click → Map Tool → Prefetch).</td></tr>
+      <tr><td class="k">"Windows protected your PC"</td><td>See 4.2. Appears until the installer is code-signed.</td></tr>
+      <tr><td class="k">Blurry text</td><td>Windows display scaling above 100%. Same as Mission Planner.</td></tr>
+      <tr><td class="k">Program closes or freezes</td><td>Send the diagnostic log (chapter 16) and the telemetry log to Sarus support.</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- 18 -->
+<section class="chapter cont" id="c18">
+  <h2><span class="n">18</span>Privacy, licence and support</h2>
+  <h3>Network connections the program makes</h3>
+  <table>
+    <tbody>
+      <tr><td class="k">ArduPilot servers</td><td>Firmware lists and downloads, parameter descriptions, SITL binaries</td></tr>
+      <tr><td class="k">GitHub (Sarus releases)</td><td>Update checks and update downloads</td></tr>
+      <tr><td class="k">Map providers</td><td>Map tiles and elevation data for the area you view (same providers as Mission Planner)</td></tr>
+      <tr><td class="k">Optional plugins</td><td>Only if you enable them (for example Altitude Angel airspace data)</td></tr>
+      <tr><td class="k">Usage statistics</td><td>Off by default. Nothing is sent unless you turn it on.</td></tr>
+    </tbody>
+  </table>
+  <p>Telemetry, logs, missions and parameters stay on your computer unless you share them.</p>
+  <h3>Licence</h3>
+  <p>Sarus Operation Planner is free software under the GNU General Public License version 3. You may copy, change and redistribute it under the terms of that licence. It is provided <b>without any warranty</b>. Complete source code: <a href="https://github.com/LikhitS/SarusOperationPlanner">github.com/LikhitS/SarusOperationPlanner</a>.</p>
+  <p>Based on Mission Planner by Michael Oborne and the ArduPilot contributors. ArduPilot and Mission Planner are the property of their respective owners and do not endorse this product. Menu icons: Tabler Icons (MIT).</p>
+  <h3>Support</h3>
+  <p>Sarus Aerospace Pvt Ltd · <a href="https://www.sarusaerospace.in/">www.sarusaerospace.in</a>. When reporting a problem, include the Sarus version (HELP screen), firmware version, the steps to reproduce it, the diagnostic log and the telemetry log.</p>
+</section>
+
+<!-- 19 -->
+<section class="chapter" id="c19">
+  <h2><span class="n">19</span>Abbreviations</h2>
+  <table class="glossary">
+    <tbody>
+      <tr><td class="k">ADS-B</td><td>Automatic Dependent Surveillance–Broadcast (aircraft position broadcasts)</td></tr>
+      <tr><td class="k">AHRS</td><td>Attitude and Heading Reference System</td></tr>
+      <tr><td class="k">CAN</td><td>Controller Area Network (DroneCAN / UAVCAN peripherals)</td></tr>
+      <tr><td class="k">COG</td><td>Course Over Ground</td></tr>
+      <tr><td class="k">DGCA</td><td>Directorate General of Civil Aviation (India)</td></tr>
+      <tr><td class="k">EKF</td><td>Extended Kalman Filter (position and attitude estimator)</td></tr>
+      <tr><td class="k">ESC</td><td>Electronic Speed Controller</td></tr>
+      <tr><td class="k">FBWA / FBWB</td><td>Fly-By-Wire A / B (assisted fixed-wing modes)</td></tr>
+      <tr><td class="k">FFT</td><td>Fast Fourier Transform (vibration analysis, harmonic notch)</td></tr>
+      <tr><td class="k">GCS</td><td>Ground Control Station</td></tr>
+      <tr><td class="k">GPL</td><td>GNU General Public License</td></tr>
+      <tr><td class="k">HDOP</td><td>Horizontal Dilution of Precision (GPS accuracy, lower is better)</td></tr>
+      <tr><td class="k">HUD</td><td>Head-Up Display</td></tr>
+      <tr><td class="k">KML / SHP</td><td>Google Earth file / shapefile (map shapes)</td></tr>
+      <tr><td class="k">MAVLink</td><td>Micro Air Vehicle Link (aircraft–ground protocol)</td></tr>
+      <tr><td class="k">MSI</td><td>Microsoft Installer package</td></tr>
+      <tr><td class="k">NMEA</td><td>GPS sentence format (National Marine Electronics Association)</td></tr>
+      <tr><td class="k">OSD</td><td>On-Screen Display (video overlay)</td></tr>
+      <tr><td class="k">PID</td><td>Proportional–Integral–Derivative control loop</td></tr>
+      <tr><td class="k">POI / ROI</td><td>Point / Region Of Interest</td></tr>
+      <tr><td class="k">PWM</td><td>Pulse Width Modulation (servo and RC signals, in microseconds)</td></tr>
+      <tr><td class="k">QHOVER / QLOITER / QLAND / QRTL</td><td>QuadPlane VTOL modes: hover, hold position, land, return to launch</td></tr>
+      <tr><td class="k">RC</td><td>Radio Control</td></tr>
+      <tr><td class="k">REPL</td><td>Read–Eval–Print Loop (interactive script console)</td></tr>
+      <tr><td class="k">RTCM / RTK</td><td>GPS correction format / Real-Time Kinematic GPS</td></tr>
+      <tr><td class="k">RTL</td><td>Return To Launch</td></tr>
+      <tr><td class="k">SiK</td><td>Common open-source telemetry radio firmware</td></tr>
+      <tr><td class="k">SITL</td><td>Software In The Loop (simulator)</td></tr>
+      <tr><td class="k">SRTM</td><td>Shuttle Radar Topography Mission (terrain elevation data)</td></tr>
+      <tr><td class="k">TECS</td><td>Total Energy Control System (ArduPlane speed and height control)</td></tr>
+      <tr><td class="k">tlog / bin</td><td>Telemetry log / DataFlash (on-board) log</td></tr>
+      <tr><td class="k">UTM</td><td>Universal Transverse Mercator (grid coordinates)</td></tr>
+      <tr><td class="k">VTOL</td><td>Vertical Take-Off and Landing</td></tr>
+      <tr><td class="k">WP</td><td>Waypoint</td></tr>
+    </tbody>
+  </table>
+</section>
+</body>
+</html>

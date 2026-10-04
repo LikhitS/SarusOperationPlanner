@@ -1,0 +1,189 @@
+<title>Sarus Legal Drafts</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600;700&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: one reading column of three numbered draft documents, each followed by notes for counsel */
+:root {
+  --bg: #f4f6f8; --surface: #ffffff; --ink: #14202b; --muted: #566472; --line: #d5dce3;
+  --accent: #1a6fae; --brand: #b5263a; --warn: #b7791f; --note: #eef4fa;
+  --display: "Barlow Semi Condensed", "Arial Narrow", system-ui, sans-serif;
+  --body: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+  --mono: "JetBrains Mono", Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #11161c; --surface: #1a2129; --ink: #e7ecf1; --muted: #9aa8b6; --line: #2d3843;
+  --accent: #62b5ec; --brand: #e0566a; --warn: #e8b45a; --note: #18242f; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #11161c; --surface: #1a2129; --ink: #e7ecf1; --muted: #9aa8b6; --line: #2d3843;
+  --accent: #62b5ec; --brand: #e0566a; --warn: #e8b45a; --note: #18242f; color-scheme: dark }
+body { background: var(--bg); color: var(--ink); font: 16px/1.62 var(--body); margin: 0; }
+.wrap { max-width: 820px; margin: 0 auto; padding-inline: 18px; padding-block: 36px 72px; }
+header { border-bottom: 2px solid var(--ink); padding-bottom: 16px; display: grid; gap: 8px; }
+.eyebrow { font: 600 12px/1 var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--brand); }
+h1 { font: 700 clamp(1.9rem, 5vw, 2.7rem)/1.05 var(--display); margin: 0; }
+.lede { color: var(--muted); margin: 0; max-width: 64ch; }
+.draft { margin-top: 18px; border: 2px solid var(--warn); padding: 12px 16px; }
+.draft strong { display: block; font: 700 12px/1.2 var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--warn); margin-bottom: 4px; }
+.draft p { margin: 0; }
+nav { margin-top: 22px; display: flex; flex-wrap: wrap; gap: 8px 18px; font-weight: 600; }
+a { color: var(--accent); }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+article { margin-top: 44px; }
+h2 { font: 700 1.6rem/1.15 var(--display); margin: 0 0 4px; display: flex; gap: 10px; align-items: baseline; }
+h2 .n { font: 600 13px/1 var(--mono); color: var(--brand); }
+.meta { color: var(--muted); font-size: .92rem; margin: 0 0 14px; }
+h3 { font: 600 1.12rem/1.3 var(--display); margin: 22px 0 6px; }
+p, li { max-width: 70ch; }
+ol, ul { padding-left: 1.2rem; display: grid; gap: 6px; }
+.caps { text-transform: uppercase; font-size: .93rem; }
+table { border-collapse: collapse; width: 100%; font-size: .94rem; }
+.tbl { overflow-x: auto; margin: 8px 0; }
+th, td { text-align: left; padding: 7px 9px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font: 600 11.5px/1.2 var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.fill { background: color-mix(in srgb, var(--warn) 22%, transparent); padding: 0 3px; font-family: var(--mono); font-size: .88em; }
+.counsel { margin-top: 18px; background: var(--note); border-left: 3px solid var(--accent); padding: 12px 16px; }
+.counsel strong { font: 700 12px/1.2 var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--accent); display: block; margin-bottom: 6px; }
+.counsel ul { margin: 0; }
+footer { margin-top: 56px; padding-top: 12px; border-top: 1px solid var(--line); color: var(--muted); font-size: .9rem; }
+</style>
+
+<div class="wrap">
+  <header>
+    <span class="eyebrow">Sarus Aerospace Pvt Ltd · for legal review</span>
+    <h1>Sarus Legal Drafts</h1>
+    <p class="lede">Three draft texts for Sarus Operation Planner 1.0.0: terms of use, a privacy notice and a safety disclaimer. Each is followed by notes for counsel that explain the technical facts behind it and the open questions.</p>
+    <div class="draft"><strong>Draft · not legal advice</strong><p>Prepared by engineering from the software's actual behaviour. It must be reviewed and adapted by a qualified lawyer before publication. Items in <span class="fill">highlighted brackets</span> need company details.</p></div>
+    <nav aria-label="Documents"><a href="#terms">1 · Terms of use</a><a href="#privacy">2 · Privacy notice</a><a href="#safety">3 · Safety disclaimer</a><a href="#facts">Technical facts</a></nav>
+  </header>
+
+  <!-- 1 -->
+  <article id="terms">
+    <h2><span class="n">01</span>Terms of Use</h2>
+    <p class="meta">Shown in the installer next to the GNU GPL and published on the website.</p>
+
+    <h3>1. Who we are</h3>
+    <p>Sarus Operation Planner ("the Software") is published by Sarus Aerospace Private Limited, <span class="fill">[CIN]</span>, <span class="fill">[registered office address]</span>, India ("Sarus", "we").</p>
+
+    <h3>2. Licence</h3>
+    <p>The Software is free software. It is based on ArduPilot Mission Planner and is licensed to you under the GNU General Public License, version 3 ("GPL"). The GPL is the only licence that governs your rights to use, copy, modify and distribute the Software. Nothing in these terms limits any right the GPL gives you. If anything in these terms conflicts with the GPL, the GPL prevails. The complete source code is available at <a href="https://github.com/LikhitS/SarusOperationPlanner">github.com/LikhitS/SarusOperationPlanner</a>.</p>
+
+    <h3>3. Trademarks</h3>
+    <p>"Sarus", "Sarus Aerospace", "Sarus Operation Planner" and the Sarus crane logo are trademarks of Sarus Aerospace Private Limited. The GPL does not grant trademark rights. You may say truthfully that a product is based on Sarus Operation Planner. If you distribute a modified version, you must remove the Sarus name and logo from it, or mark it clearly as modified and not supplied by Sarus. "ArduPilot" and "Mission Planner" belong to their respective owners, who do not endorse the Software.</p>
+
+    <h3>4. Your responsibilities</h3>
+    <ol>
+      <li>You are the operator of any aircraft you control or configure with the Software, and you are responsible for its safe and lawful operation.</li>
+      <li>You must comply with all laws that apply to your flights. In India these include the Drone Rules, 2021, as amended, and the requirements of the Directorate General of Civil Aviation and the Digital Sky platform.</li>
+      <li>You must test any configuration, parameter change, mission or firmware on the ground and in a safe area before relying on it.</li>
+    </ol>
+
+    <h3>5. No warranty</h3>
+    <p class="caps">The Software is provided "as is", without warranty of any kind, express or implied, including the implied warranties of merchantability and fitness for a particular purpose, to the extent permitted by applicable law. The entire risk as to the quality and performance of the Software is with you. This repeats sections 15 and 16 of the GPL.</p>
+
+    <h3>6. Limitation of liability</h3>
+    <p class="caps">To the extent permitted by applicable law, Sarus will not be liable for any damages, including loss of or damage to aircraft, property, data or business, personal injury, or any general, special, incidental or consequential damages, arising out of the use of or inability to use the Software.</p>
+    <p><span class="fill">[Counsel: decide whether to add a cap or carve-outs required by Indian law (for example, for death or personal injury caused by negligence), and how this interacts with any paid aircraft or support contract.]</span></p>
+
+    <h3>7. Third-party services</h3>
+    <p>The Software can connect to services that Sarus does not control, such as map providers, ArduPilot firmware servers and optional plugins (see the Privacy Notice). Their own terms apply. Sarus does not guarantee their availability or accuracy, including the accuracy of maps, elevation data and airspace information.</p>
+
+    <h3>8. Updates</h3>
+    <p>The Software checks the Sarus release page for new versions and offers to install them. You may decline. Sarus may change or stop the update service at any time.</p>
+
+    <h3>9. Governing law</h3>
+    <p>These terms are governed by the laws of India. The courts at <span class="fill">[city]</span> have exclusive jurisdiction, subject to any rights you have under the GPL or mandatory consumer law.</p>
+
+    <h3>10. Contact</h3>
+    <p><span class="fill">[legal@sarusaerospace.in]</span> · <a href="https://www.sarusaerospace.in/">www.sarusaerospace.in</a></p>
+
+    <div class="counsel"><strong>Notes for counsel</strong>
+      <ul>
+        <li>The Software is a modified version of a GPLv3 program. Section 10 of the GPL forbids "further restrictions" on the licensed rights, so these terms deliberately add no restrictions on use, copying or modification. A conventional EULA (no reverse engineering, single-user licence, and so on) would breach the GPL and must not be used.</li>
+        <li>GPL section 7(e) allows declining to grant trademark rights. Clause 3 relies on this. Consider registering the trademarks (Trade Marks Act, 1999) and searching for conflicts first.</li>
+        <li>Clause 4 is acknowledgement and responsibility allocation, not a usage restriction. Please confirm it does not amount to a "further restriction" under the GPL.</li>
+        <li>The installer currently shows only the GPL with a Sarus notice. Once approved, these terms can be added to the installer screen and to the website.</li>
+      </ul>
+    </div>
+  </article>
+
+  <!-- 2 -->
+  <article id="privacy">
+    <h2><span class="n">02</span>Privacy Notice</h2>
+    <p class="meta">For the website and the Help screen. Intended to meet the Digital Personal Data Protection Act, 2023.</p>
+
+    <h3>Summary</h3>
+    <p>Sarus Operation Planner runs on your own computer. No Sarus server receives your flight data, telemetry, logs, missions or parameters; they stay where they are unless you decide to send them to someone.</p>
+
+    <h3>What the Software stores on your computer</h3>
+    <p>Settings, telemetry logs, logs downloaded from the flight controller, missions, parameter files and cached map images are kept in <code>Documents\Sarus Operation Planner</code>. A diagnostic log is written to <code>ProgramData\Sarus Operation Planner</code>. Because the logs record the aircraft's GPS position against time, they show where and when you flew, so think before sharing them.</p>
+
+    <h3>Internet connections the Software makes</h3>
+    <p>When your computer is online, the Software connects to the services below. Each service receives your computer's IP address and the request itself. Sarus does not receive this information.</p>
+    <div class="tbl"><table>
+      <thead><tr><th>Service</th><th>When</th><th>What is sent</th></tr></thead>
+      <tbody>
+        <tr><td>Map and imagery providers (for example Google, Microsoft Bing, Esri ArcGIS, OpenStreetMap, NASA)</td><td>Whenever a map is shown, for the provider you select</td><td>The map area and zoom level you view</td></tr>
+        <tr><td>ArduPilot servers (firmware.ardupilot.org, terrain.ardupilot.org, autotest.ardupilot.org) and the Mission Planner firmware list (firmware.oborne.me)</td><td>Installing firmware, loading parameter descriptions, terrain data, simulation</td><td>The files requested, which can include the area you plan to fly</td></tr>
+        <tr><td>GitHub (Sarus releases)</td><td>Update checks at start-up and when you choose "Check for Updates"</td><td>A request for the latest version number and update files</td></tr>
+        <tr><td>Optional services: Altitude Angel airspace data, internet ADS-B traffic (adsb.lol), CubePilot secure boot, other plugins</td><td>Only if you enable them</td><td>As described by each service, typically your location or area of interest</td></tr>
+        <tr><td>Anonymous usage statistics (Google Analytics)</td><td>Off by default. Only if you turn it on in CONFIG → Planner.</td><td>Anonymous usage events such as screens opened</td></tr>
+      </tbody>
+    </table></div>
+
+    <h3>Your choices</h3>
+    <p>You can work entirely offline: flying, setup over USB and planning with maps cached earlier all work without an internet connection. Usage statistics stay off unless you switch them on, and optional plugins stay disabled unless you enable them. Deleting the folders named above removes your local data at any time.</p>
+
+    <h3>Support requests</h3>
+    <p>If you send logs or files to Sarus for support, we use them only to resolve your request and delete them after <span class="fill">[period]</span>. <span class="fill">[Grievance officer / contact: name, email]</span>.</p>
+
+    <h3>Changes</h3>
+    <p>We will publish any change to this notice with the release notes of the version that introduces it.</p>
+
+    <div class="counsel"><strong>Notes for counsel</strong>
+      <ul>
+        <li>The table above reflects the source code of version 1.0.0 (checked on 4 October 2026). Sarus itself currently collects nothing. Personal data handling by Sarus arises only from support requests and from any future Sarus server (for example a Sarus firmware server).</li>
+        <li>Map tiles are fetched directly from third-party providers chosen by the user, as in Mission Planner. Their terms of service may restrict commercial use; review before selling the Software with aircraft.</li>
+        <li>Flight logs may be personal data of the operator, and may be sensitive for defence customers. Consider guidance for customers on log handling.</li>
+        <li>If usage statistics are ever turned on by default, consent under DPDPA would be needed first.</li>
+      </ul>
+    </div>
+  </article>
+
+  <!-- 3 -->
+  <article id="safety">
+    <h2><span class="n">03</span>Safety Disclaimer</h2>
+    <p class="meta">Shown in the manual, on the website and on first start.</p>
+
+    <p><b>Unmanned aircraft can cause serious injury, death and damage to property.</b> Sarus Operation Planner helps you configure and monitor an aircraft. It cannot make an aircraft safe, airworthy or legal to fly.</p>
+    <p>The person operating the aircraft is responsible for every flight, automatic modes included. Keep the radio control transmitter in your hands and be ready to take over at any moment.</p>
+    <p>Parameters can crash an aircraft. This Software lets you set values outside the recommended ranges and, after a warning, change parameters marked read-only. It will warn you; it will not stop you. Save a backup before you change anything, and test every change on the ground first. Whenever you calibrate, test motors, install firmware or change parameters, the propellers must be off.</p>
+    <p>Telemetry, maps, elevation, airspace and traffic information can arrive late, be incomplete or be plain wrong. Never rely on them alone to keep clear of terrain, obstacles, people or other aircraft. Radio links fail too, which is why failsafe actions for loss of radio control, telemetry and GPS, and for a low battery, have to be set up and tested.</p>
+    <p>Register and fly as the Drone Rules, 2021 (as amended), the DGCA and the Digital Sky platform require, including airspace zones, permissions, pilot certification and the Unique Identification Number. Outside India, the law of the country where you fly applies.</p>
+    <p>Sarus tested this version in ArduPilot's simulator. Before operational use, test it with your own aircraft, flight controller and radios, first on the bench and then in a controlled first flight.</p>
+
+    <div class="counsel"><strong>Notes for counsel</strong>
+      <ul>
+        <li>Point 2 describes deliberate Sarus features (non-blocking range warnings, editable read-only parameters). The disclaimer should make clear that these are the operator's choice.</li>
+        <li>Consider whether a "click to accept" on first start is wanted. Technically it can be added without restricting GPL rights.</li>
+        <li>Product-liability exposure is mainly tied to aircraft that Sarus sells with this software. Consider aligning this text with the aircraft's sale contract and manual.</li>
+      </ul>
+    </div>
+  </article>
+
+  <!-- facts -->
+  <article id="facts">
+    <h2><span class="n">04</span>Technical facts for review</h2>
+    <div class="tbl"><table>
+      <tbody>
+        <tr><td>Licence</td><td>GNU GPL v3. Based on Mission Planner (Michael Oborne and ArduPilot contributors, GPL v3). Menu icons: Tabler Icons, MIT licence.</td></tr>
+        <tr><td>Source code</td><td>Public: github.com/LikhitS/SarusOperationPlanner (personal GitHub account; consider moving to a company account).</td></tr>
+        <tr><td>Installer contents</td><td>Also installs Mission Planner's USB drivers and adds their signing certificate ("Michael Oborne") to the machine's trusted root certificates, as Mission Planner does.</td></tr>
+        <tr><td>Code signing</td><td>Not yet signed. A D-U-N-S number and an Organisation Validated certificate are being obtained.</td></tr>
+        <tr><td>Data collected by Sarus</td><td>None in version 1.0.0.</td></tr>
+        <tr><td>Usage statistics</td><td>Google Analytics code inherited from Mission Planner, switched off by default.</td></tr>
+      </tbody>
+    </table></div>
+  </article>
+
+  <footer>Sarus Aerospace Pvt Ltd · draft for legal review · Sarus Operation Planner 1.0.0 · 4 October 2026</footer>
+</div>

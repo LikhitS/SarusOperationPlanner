@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Sarus Operation Planner - Future Plans</title>
+<link rel="stylesheet" href="sarus-print.css">
+<style>@page { @top-left { content: "Sarus Operation Planner · Future Plans"; font: 600 8pt "Barlow Semi Condensed", sans-serif; letter-spacing: .08em; text-transform: uppercase; color: #566472; }
+ @bottom-left { content: "Roadmap proposal · October 2026 · Internal"; font: 8pt "Source Sans 3", sans-serif; color: #566472; } }
+.pri { font: 700 7.5pt var(--mono); letter-spacing: .08em; padding: .4mm 1.6mm; border: 1px solid currentColor; white-space: nowrap; }
+.p1 { color: #B5263A; } .p2 { color: #B7791F; } .p3 { color: #1A6FAE; }
+</style>
+</head>
+<body>
+
+<div class="cover">
+  <div class="top">
+    <img src="logo.svg" alt="Sarus Aerospace logo">
+    <div class="co">Sarus Aerospace<small>Private Limited · India</small></div>
+  </div>
+  <div class="mid">
+    <div class="kind">Roadmap proposal</div>
+    <h1>Future Plans</h1>
+    <p class="sub">Where Sarus Operation Planner and the Sarus firmware could go after version 1.0, and the order we suggest doing it in.</p>
+    <div class="rule"></div>
+  </div>
+  <dl class="meta">
+    <div><dt>Covers</dt><dd>App, firmware, quality, business</dd></div>
+    <div><dt>Baseline</dt><dd>App 1.0.0 · Firmware 4.7.1-S1</dd></div>
+    <div><dt>Date</dt><dd>4 October 2026</dd></div>
+    <div><dt>Status</dt><dd>Proposal for discussion</dd></div>
+  </dl>
+</div>
+
+<section class="chapter" id="f1">
+  <h2><span class="n">01</span>Starting point</h2>
+  <p class="lead">Version 1.0 gives Sarus a ground station of its own. It does everything Mission Planner does, loses fewer messages, and comes with a firmware line that is built automatically for Pixhawk-class boards.</p>
+  <p>All of it has been tested in ArduPilot's simulator, on QuadPlane, Copter and Rover, and it installs cleanly on fresh Windows 10 and 11 machines. None of it has flown a real aircraft yet. That makes the field test the first item on any list, and it is why the other ideas here are proposals rather than commitments.</p>
+  <div class="kpis">
+    <div class="kpi"><b>3</b><span>vehicle types tested in simulation</span></div>
+    <div class="kpi"><b>~3,070</b><span>parameters written, read back and restored</span></div>
+    <div class="kpi"><b>0</b><span>changes to Mission Planner's shortcuts, screens, menus and controls</span></div>
+    <div class="kpi"><b>7</b><span>board families in the first Sarus firmware build</span></div>
+  </div>
+  <p>Each idea below carries a priority. <span class="pri p1">P1</span> means it is needed to ship and run version 1.0 safely, within weeks. <span class="pri p2">P2</span> items bring clear value to pilots or customers over the next few releases. <span class="pri p3">P3</span> marks larger projects that depend on the earlier ones.</p>
+</section>
+
+<section class="chapter cont" id="f2">
+  <h2><span class="n">02</span>Finishing version 1.0</h2>
+  <p>Six things stand between the current build and a public release, and all of them are <span class="pri p1">P1</span>.</p>
+  <p>The field test comes first. Radios, sensors and real airframes behave in ways a simulator does not, and the Field Test Checklist exists for exactly this: bench work with the propellers off, then a staged first flight.</p>
+  <p>Code signing is the second. Without it, Windows greets every new user with "Windows protected your PC", which is a poor first impression for a product sold with aircraft. It needs a D-U-N-S number for the company and then an organisation-validated certificate with cloud signing.</p>
+  <p>Two smaller fixes belong here as well. The update package still carries Mission Planner's own change log, and the installer file is named after the Mission Planner base version (1.3.83) instead of 1.0.0. Both should say Sarus.</p>
+  <p>The first Sarus firmware release follows once the Sarus builds have passed the same simulator tests as the app. Before anything is distributed publicly, a lawyer should review the terms, privacy notice and safety disclaimer, and someone should run a trademark search on "Sarus". Last, both GitHub repositories still live under a personal account and should move to a company organisation.</p>
+</section>
+
+<section class="chapter" id="f3">
+  <h2><span class="n">03</span>Firmware</h2>
+  <p>The most useful firmware change is probably the least exciting one. A Sarus QuadPlane parameter set built into the firmware would give every new aircraft the same frame settings, output assignments and TECS and VTOL starting values. Setup would be faster, and a whole class of configuration mistakes would disappear. <span class="pri p2">P2</span></p>
+  <p>Then there are the limits. The parameter sweeps found several places where ArduPilot quietly keeps a different value from the one sent. Three parameters (<code>EK3_BCN_DELAY</code>, <code>EK3_FLOW_DELAY</code>, <code>LAND_THR_SLEW</code>) are stored in 8 bits and stop at 127 although their documentation allows more, and the loiter acceleration is cut down after it has been accepted. The flight team will name others as they fly. We suggest changing them one per release, each with simulator results from before and after, so nothing changes without evidence. <span class="pri p2">P2</span></p>
+  <p>Two habits would protect all of this. ArduPilot ships its own autotest suites for Plane, Copter and Rover, and running them on every Sarus change would catch most regressions before a release. And each new stable ArduPilot release should be merged into a new Sarus branch within days, because ArduPilot's safety fixes have to reach Sarus aircraft quickly. <span class="pri p2">P2</span></p>
+  <p>Longer term, Sarus could build for every board ArduPilot supports. That is roughly 1,100 firmware files per release, more than GitHub allows in a single release, so it would mean one release per vehicle type. Signed firmware and secure boot, on boards that support them, would make sure only approved Sarus firmware runs on Sarus aircraft. <span class="pri p3">P3</span></p>
+</section>
+
+<section class="chapter cont" id="f4">
+  <h2><span class="n">04</span>Ground station</h2>
+  <p>The rule from version 1.0 stays: every Mission Planner button, screen and shortcut remains where it is. New functions go next to them.</p>
+  <h3>For pilots</h3>
+  <p>Text looks slightly soft on screens set to more than 100% scaling, and most new laptops run at 125% or more. Fixing that is the most visible improvement we could make. <span class="pri p2">P2</span></p>
+  <p>A QuadPlane pre-flight checklist inside the existing PreFlight tab would put the Sarus procedure where the pilot already looks. Offline map packs, prepared in the office and copied to the field laptops, would remove the grey map that appears wherever there is no internet. A history of parameter changes, recording who changed which value and when, would help both tuning and incident reviews. Airframe profiles would compare an aircraft with its approved Sarus settings and point out every difference before flight. <span class="pri p2">P2</span></p>
+  <p>Further out, a view that plots airspeed, throttle, pitch and height error during transitions would shorten QuadPlane tuning sessions. Hindi and other Indian languages can be added through the translation system the program already has. <span class="pri p3">P3</span></p>
+  <h3>For regulation in India</h3>
+  <p>Operators have to keep flight records, and a per-flight summary taken from the telemetry log (aircraft, UIN, pilot, times, area and maximum height) would save that paperwork. <span class="pri p2">P2</span> Showing the Digital Sky green, yellow and red zones on the PLAN and DATA maps depends on what data and terms are available, and permission and Remote ID workflows should wait until DGCA's requirements for Sarus aircraft categories are clear. <span class="pri p3">P3</span></p>
+  <h3>Security</h3>
+  <p>ArduPilot and the ground station already support MAVLink message signing, which stops commands from unauthorised ground stations. What is missing is a Sarus procedure for creating and handling the keys. Once that exists, signing could be switched on for every Sarus aircraft. <span class="pri p2">P2</span></p>
+</section>
+
+<section class="chapter cont" id="f5">
+  <h2><span class="n">05</span>Testing</h2>
+  <p>So far the test harness has only ever flown simulated aircraft. A hardware-in-the-loop bench, with a real flight controller on a desk connected to the simulator, would let the same tests exercise real USB connections, real firmware and real timing. If a dedicated Windows machine ran the full regression every night, each change would be checked without anyone having to start it. With the user's consent, crash reports could come back to Sarus, so problems in the field are seen early. <span class="pri p2">P2</span></p>
+  <p>Some fixes deserve to go back upstream, the lost-reply fix most of all. Every fix Mission Planner or ArduPilot accepts is code Sarus no longer has to maintain alone. Merging each new Mission Planner release, followed by the full regression, keeps Sarus in step with the original. <span class="pri p3">P3</span></p>
+</section>
+
+<section class="chapter cont" id="f6">
+  <h2><span class="n">06</span>Other platforms</h2>
+  <p>Today the program runs on Windows only. Most of what it does, the communication, parameters, missions and logs, is shared .NET code that runs elsewhere already. The work lies in the interface. We would rebuild it one screen group at a time (DATA, PLAN, SETUP, CONFIG) with a cross-platform toolkit, running the same test harness against each platform, and release nothing until a platform matches the Windows version feature for feature and shortcut for shortcut.</p>
+  <p>An Android tablet version for field use makes sense first. macOS and Linux versions, mostly for engineering work, can follow.</p>
+</section>
+
+<section class="chapter cont" id="f7">
+  <h2><span class="n">07</span>Business and support</h2>
+  <p>Customers will need a place to find the manual, release notes and short how-to videos, so a documentation website comes early. So does a support process: one address, an issue tracker and agreed response times. Releasing the app and firmware on a regular schedule, each with release notes and a test report, makes it easier for customers to plan. <span class="pri p2">P2</span></p>
+  <p>Training courses for pilots and technicians can be built from the manual and checklist once those have settled. A fleet view, showing several aircraft and their maintenance state on one screen, becomes useful as the number of Sarus aircraft grows. <span class="pri p3">P3</span></p>
+</section>
+
+<section class="chapter" id="f8">
+  <h2><span class="n">08</span>Suggested order</h2>
+  <table>
+    <thead><tr><th>Step</th><th>Work</th><th>Priority</th></tr></thead>
+    <tbody>
+      <tr><td class="k">1</td><td>Field test, code signing, Sarus change log and installer name, first firmware release, legal review, company GitHub organisation</td><td><span class="pri p1">P1</span></td></tr>
+      <tr><td class="k">2</td><td>Sarus QuadPlane defaults in the firmware; first limit changes; ArduPilot autotests in the firmware build</td><td><span class="pri p2">P2</span></td></tr>
+      <tr><td class="k">3</td><td>Sharp text on high-resolution screens, QuadPlane checklist, parameter history, airframe profiles, offline maps</td><td><span class="pri p2">P2</span></td></tr>
+      <tr><td class="k">4</td><td>Hardware-in-the-loop bench and nightly regression; message signing procedure</td><td><span class="pri p2">P2</span></td></tr>
+      <tr><td class="k">5</td><td>Compliance flight-log export, documentation website, support process</td><td><span class="pri p2">P2</span></td></tr>
+      <tr><td class="k">6</td><td>Android version, all boards, signed firmware, transition monitor, Indian languages, airspace overlay, fleet view</td><td><span class="pri p3">P3</span></td></tr>
+    </tbody>
+  </table>
+  <div class="sig">
+    <div>Prepared by: Engineering</div>
+    <div>Reviewed by:</div>
+    <div>Approved by:</div>
+  </div>
+</section>
+</body>
+</html>
