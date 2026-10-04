@@ -3278,11 +3278,9 @@ Sarus Operation Planner waits for 2 valid heartbeat packets before connecting
         /// Returns WP count
         /// </summary>
         /// <returns></returns>
-        public async Task<ushort> getWPCountAsync(uint sysid, byte compid,
+        public Task<ushort> getWPCountAsync(uint sysid, byte compid,
             MAVLink.MAV_MISSION_TYPE type = MAV_MISSION_TYPE.MISSION)
         {
-            giveComport = true;
-            MAVLinkMessage buffer;
             mavlink_mission_request_list_t req = new mavlink_mission_request_list_t
             {
                 target_system = (byte)(sysid),
@@ -3290,47 +3288,19 @@ Sarus Operation Planner waits for 2 valid heartbeat packets before connecting
                 mission_type = (byte) type
             };
 
-            // request list
-            generatePacket((byte) MAVLINK_MSG_ID.MISSION_REQUEST_LIST, req, sysid, compid);
-
-            DateTime start = DateTime.Now;
-            int retrys = 6;
-
-            while (true)
-            {
-                if (!(start.AddMilliseconds(700) > DateTime.Now))
+            // Sarus: reply via subscription (see RequestReplyAsync)
+            return RequestReplyAsync(sysid, compid, new[] { MAVLINK_MSG_ID.MISSION_COUNT }, buffer =>
                 {
-                    if (retrys > 0)
-                    {
-                        log.Info("getWPCount Retry " + retrys + " - giv com " + giveComport);
-                        generatePacket((byte) MAVLINK_MSG_ID.MISSION_REQUEST_LIST, req, sysid, compid);
-                        start = DateTime.Now;
-                        retrys--;
-                        continue;
-                    }
+                    var count = buffer.ToStructure<mavlink_mission_count_t>();
+                    // check this gcs sent it
+                    if (!buffer.IsTargetedTo(gcssysid, (byte)MAV_COMPONENT.MAV_COMP_ID_MISSIONPLANNER))
+                        return (ReplyAction.Ignore, (ushort)0);
 
-                    giveComport = false;
-                    //return (byte)int.Parse(param["WP_TOTAL"].ToString());
-                    throw new TimeoutException("Timeout on read - getWPCount");
-                }
-
-                buffer = await readPacketAsync().ConfigureAwait(false);
-                if (buffer.Length > 5)
-                {
-                    if (buffer.msgid == (byte) MAVLINK_MSG_ID.MISSION_COUNT && buffer.sysid == sysid &&
-                        buffer.compid == req.target_component)
-                    {
-                        var count = buffer.ToStructure<mavlink_mission_count_t>();
-                        // check this gcs sent it
-                        if (!buffer.IsTargetedTo(gcssysid, (byte)MAV_COMPONENT.MAV_COMP_ID_MISSIONPLANNER))
-                            continue;
-
-                        log.Info("wpcount: " + count.count);
-                        giveComport = false;
-                        return count.count; // should be ushort, but apm has limited wp count < byte
-                    }
-                }
-            }
+                    log.Info("wpcount: " + count.count);
+                    return (ReplyAction.Done, count.count);
+                },
+                () => generatePacket((byte) MAVLINK_MSG_ID.MISSION_REQUEST_LIST, req, sysid, compid),
+                700, 6, "getWPCount");
         }
 
         [Obsolete]
@@ -3410,7 +3380,7 @@ Sarus Operation Planner waits for 2 valid heartbeat packets before connecting
         /// </summary>
         /// <param name="index"></param>
         /// <returns>WP</returns>
-        public async Task<Locationwp> getWPAsync(uint sysid, byte compid, ushort index,
+        public Task<Locationwp> getWPAsync(uint sysid, byte compid, ushort index,
             MAVLink.MAV_MISSION_TYPE type = MAV_MISSION_TYPE.MISSION)
         {
             while (giveComport == true)
@@ -3422,80 +3392,50 @@ Sarus Operation Planner waits for 2 valid heartbeat packets before connecting
 
             if (use_int)
             {
-                mavlink_mission_request_int_t reqi = new mavlink_mission_request_int_t
+                req = new mavlink_mission_request_int_t
                 {
                     target_system = (byte)(sysid),
                     target_component = compid,
                     mission_type = (byte) type,
                     seq = index
                 };
-
-                // request
-                generatePacket((byte) MAVLINK_MSG_ID.MISSION_REQUEST_INT, reqi, sysid, compid);
-
-                req = reqi;
             }
             else
             {
-                mavlink_mission_request_t reqf = new mavlink_mission_request_t
+                req = new mavlink_mission_request_t
                 {
                     target_system = (byte)(sysid),
                     target_component = compid,
                     mission_type = (byte) type,
                     seq = index
                 };
-
-                // request
-                generatePacket((byte) MAVLINK_MSG_ID.MISSION_REQUEST, reqf, sysid, compid);
-
-                req = reqf;
             }
 
-            giveComport = true;
-            Locationwp loc = new Locationwp();
-
-            DateTime start = DateTime.Now;
-            int retrys = 5;
-
-            while (true)
+            void sendRequest()
             {
-                if (!(start.AddMilliseconds(2500) > DateTime.Now)) // apm times out after 5000ms
+                if (use_int)
+                    generatePacket((byte) MAVLINK_MSG_ID.MISSION_REQUEST_INT, req, sysid, compid);
+                else
+                    generatePacket((byte) MAVLINK_MSG_ID.MISSION_REQUEST, req, sysid, compid);
+            }
+
+            // Sarus: reply via subscription (see RequestReplyAsync). apm times out after 5000ms.
+            return RequestReplyAsync(sysid, compid,
+                new[] { MAVLINK_MSG_ID.MISSION_ITEM, MAVLINK_MSG_ID.MISSION_ITEM_INT }, buffer =>
                 {
-                    if (retrys > 0)
+                    Locationwp loc = new Locationwp();
+
+                    if (buffer.msgid == (byte) MAVLINK_MSG_ID.MISSION_ITEM)
                     {
-                        log.Info("getWP Retry " + retrys);
-                        if (use_int)
-                            generatePacket((byte) MAVLINK_MSG_ID.MISSION_REQUEST_INT, req, sysid, compid);
-                        else
-                            generatePacket((byte) MAVLINK_MSG_ID.MISSION_REQUEST, req, sysid, compid);
-                        start = DateTime.Now;
-                        retrys--;
-                        continue;
-                    }
-
-                    giveComport = false;
-                    throw new TimeoutException("Timeout on read - getWP");
-                }
-
-                //Console.WriteLine("getwp read " + DateTime.Now.Millisecond);
-                MAVLinkMessage buffer = await readPacketAsync().ConfigureAwait(false);
-                //Console.WriteLine("getwp readend " + DateTime.Now.Millisecond);
-                if (buffer.Length > 5)
-                {
-                    if (buffer.msgid == (byte) MAVLINK_MSG_ID.MISSION_ITEM && buffer.sysid == sysid &&
-                        buffer.compid == compid)
-                    {
-                        //Console.WriteLine("getwp ans " + DateTime.Now.Millisecond);
-
                         var wp = buffer.ToStructure<mavlink_mission_item_t>();
                         if (!buffer.IsTargetedTo(gcssysid, (byte)MAV_COMPONENT.MAV_COMP_ID_MISSIONPLANNER))
-                            continue;
+                            return (ReplyAction.Ignore, loc);
 
                         // received a packet, but not what we requested
                         if (index != wp.seq)
                         {
                             generatePacket((byte) MAVLINK_MSG_ID.MISSION_REQUEST, req, sysid, compid);
-                            continue;
+                            return (ReplyAction.Ignore, loc);
                         }
 
                         loc.frame = wp.frame;
@@ -3512,23 +3452,20 @@ Sarus Operation Planner waits for 2 valid heartbeat packets before connecting
                         log.InfoFormat("getWP {0} {1} {2} {3} {4} opt {5}", loc.id, loc.p1, loc.alt, loc.lat, loc.lng,
                             loc.frame);
 
-                        break;
+                        return (ReplyAction.Done, loc);
                     }
-                    else if (buffer.msgid == (byte) MAVLINK_MSG_ID.MISSION_ITEM_INT && buffer.sysid == sysid &&
-                             buffer.compid == compid)
+                    else
                     {
-                        //Console.WriteLine("getwp ans " + DateTime.Now.Millisecond);
-
                         var wp = buffer.ToStructure<mavlink_mission_item_int_t>();
                         // check this gcs sent it
                         if (!buffer.IsTargetedTo(gcssysid, (byte)MAV_COMPONENT.MAV_COMP_ID_MISSIONPLANNER))
-                            continue;
+                            return (ReplyAction.Ignore, loc);
 
                         // received a packet, but not what we requested
                         if (index != wp.seq)
                         {
                             generatePacket((byte) MAVLINK_MSG_ID.MISSION_REQUEST_INT, req, sysid, compid);
-                            continue;
+                            return (ReplyAction.Ignore, loc);
                         }
 
                         loc.frame = wp.frame;
@@ -3552,17 +3489,9 @@ Sarus Operation Planner waits for 2 valid heartbeat packets before connecting
                             loc.lng,
                             loc.frame);
 
-                        break;
+                        return (ReplyAction.Done, loc);
                     }
-                    else
-                    {
-                        //log.Info(DateTime.Now + " PC getwp " + buffer.msgid);
-                    }
-                }
-            }
-
-            giveComport = false;
-            return loc;
+                }, sendRequest, 2500, 5, "getWP");
         }
 
         public object DebugPacket(MAVLinkMessage datin)
@@ -3757,10 +3686,9 @@ Sarus Operation Planner waits for 2 valid heartbeat packets before connecting
         /// Sets wp total count
         /// </summary>
         /// <param name="wp_total"></param>
-        public async Task setWPTotalAsync(uint sysid, byte compid, ushort wp_total,
+        public Task setWPTotalAsync(uint sysid, byte compid, ushort wp_total,
             MAVLink.MAV_MISSION_TYPE type = MAV_MISSION_TYPE.MISSION)
         {
-            giveComport = true;
             mavlink_mission_count_t req = new mavlink_mission_count_t
             {
                 target_system = (byte)(sysid),
@@ -3770,110 +3698,57 @@ Sarus Operation Planner waits for 2 valid heartbeat packets before connecting
             };
 
             log.Info("setWPTotal req MISSION_COUNT " + req.ToJSON(Formatting.None));
-            generatePacket((byte) MAVLINK_MSG_ID.MISSION_COUNT, req, sysid, compid);
 
-            DateTime start = DateTime.Now;
-            int retrys = 3;
-
-            while (true)
+            void clearLocalCopy()
             {
-                if (!(start.AddMilliseconds(700) > DateTime.Now))
+                if (req.mission_type == (byte) MAV_MISSION_TYPE.MISSION)
                 {
-                    if (retrys > 0)
-                    {
-                        log.Info("setWPTotal Retry " + retrys);
-                        generatePacket((byte) MAVLINK_MSG_ID.MISSION_COUNT, req, sysid, compid);
-                        start = DateTime.Now;
-                        retrys--;
-                        continue;
-                    }
-
-                    giveComport = false;
-                    throw new TimeoutException("Timeout on read - setWPTotal");
+                    if (MAV.param["WP_TOTAL"] != null)
+                        MAV.param["WP_TOTAL"].Value = wp_total - 1;
+                    if (MAV.param["CMD_TOTAL"] != null)
+                        MAV.param["CMD_TOTAL"].Value = wp_total - 1;
+                    if (MAV.param["MIS_TOTAL"] != null)
+                        MAV.param["MIS_TOTAL"].Value = wp_total - 1;
+                    MAVlist[sysid, compid].wps.Clear();
                 }
 
-                MAVLinkMessage buffer = await readPacketAsync().ConfigureAwait(false);
-                if (buffer.Length > 9)
+                if (req.mission_type == (byte) MAV_MISSION_TYPE.FENCE)
+                    MAVlist[sysid, compid].fencepoints.Clear();
+                if (req.mission_type == (byte) MAV_MISSION_TYPE.RALLY)
+                    MAVlist[sysid, compid].rallypoints.Clear();
+            }
+
+            // Sarus: reply via subscription (see RequestReplyAsync)
+            return RequestReplyAsync(sysid, compid,
+                new[] { MAVLINK_MSG_ID.MISSION_REQUEST, MAVLINK_MSG_ID.MISSION_REQUEST_INT, MAVLINK_MSG_ID.MISSION_ACK },
+                buffer =>
                 {
-                    if (buffer.msgid == (byte) MAVLINK_MSG_ID.MISSION_REQUEST && buffer.sysid == sysid &&
-                        buffer.compid == req.target_component)
-                    {
-                        var request = buffer.ToStructure<mavlink_mission_request_t>();
-                        // check this gcs sent it
-                        if (!buffer.IsTargetedTo(gcssysid, (byte)MAV_COMPONENT.MAV_COMP_ID_MISSIONPLANNER))
-                            continue;
+                    // check this gcs sent it
+                    if (buffer.Length <= 9 || !buffer.IsTargetedTo(gcssysid, (byte)MAV_COMPONENT.MAV_COMP_ID_MISSIONPLANNER))
+                        return (ReplyAction.Ignore, true);
 
-                        if (request.seq == 0 || request.seq == 1)
-                        {
-                            if (req.mission_type == (byte) MAV_MISSION_TYPE.MISSION)
-                            {
-                                if (MAV.param["WP_TOTAL"] != null)
-                                    MAV.param["WP_TOTAL"].Value = wp_total - 1;
-                                if (MAV.param["CMD_TOTAL"] != null)
-                                    MAV.param["CMD_TOTAL"].Value = wp_total - 1;
-                                if (MAV.param["MIS_TOTAL"] != null)
-                                    MAV.param["MIS_TOTAL"].Value = wp_total - 1;
-                                MAVlist[sysid, compid].wps.Clear();
-                            }
-
-                            if (req.mission_type == (byte) MAV_MISSION_TYPE.FENCE)
-                                MAVlist[sysid, compid].fencepoints.Clear();
-                            if (req.mission_type == (byte) MAV_MISSION_TYPE.RALLY)
-                                MAVlist[sysid, compid].rallypoints.Clear();
-
-                            giveComport = false;
-                            return;
-                        }
-                    }
-                    else if (buffer.msgid == (byte) MAVLINK_MSG_ID.MISSION_REQUEST_INT &&
-                             buffer.sysid == sysid && buffer.compid == req.target_component)
-                    {
-                        var request = buffer.ToStructure<mavlink_mission_request_int_t>();
-                        // check this gcs sent it
-                        if (!buffer.IsTargetedTo(gcssysid, (byte)MAV_COMPONENT.MAV_COMP_ID_MISSIONPLANNER))
-                            continue;
-
-                        if (request.seq == 0 || request.seq == 1)
-                        {
-                            if (req.mission_type == (byte) MAV_MISSION_TYPE.MISSION)
-                            {
-                                if (MAV.param["WP_TOTAL"] != null)
-                                    MAV.param["WP_TOTAL"].Value = wp_total - 1;
-                                if (MAV.param["CMD_TOTAL"] != null)
-                                    MAV.param["CMD_TOTAL"].Value = wp_total - 1;
-                                if (MAV.param["MIS_TOTAL"] != null)
-                                    MAV.param["MIS_TOTAL"].Value = wp_total - 1;
-                                MAVlist[sysid, compid].wps.Clear();
-                            }
-
-                            if (req.mission_type == (byte) MAV_MISSION_TYPE.FENCE)
-                                MAVlist[sysid, compid].fencepoints.Clear();
-                            if (req.mission_type == (byte) MAV_MISSION_TYPE.RALLY)
-                                MAVlist[sysid, compid].rallypoints.Clear();
-
-                            giveComport = false;
-                            return;
-                        }
-                    }
-                    else if (buffer.msgid == (byte) MAVLINK_MSG_ID.MISSION_ACK && buffer.sysid == sysid &&
-                             buffer.compid == req.target_component)
+                    if (buffer.msgid == (byte) MAVLINK_MSG_ID.MISSION_ACK)
                     {
                         var ans = buffer.ToStructure<mavlink_mission_ack_t>();
                         log.Info("setWPTotal ACK 47 : " + buffer.msgid + " ans " +
                                  Enum.Parse(typeof(MAV_MISSION_RESULT), ans.type.ToString()));
-                        // check this gcs sent it
-                        if (!buffer.IsTargetedTo(gcssysid, (byte)MAV_COMPONENT.MAV_COMP_ID_MISSIONPLANNER))
-                            continue;
+                        return (ReplyAction.Done, true); // (MAV_MISSION_RESULT)ans.type;
+                    }
 
-                        giveComport = false;
-                        return; // (MAV_MISSION_RESULT)ans.type;
-                    }
-                    else
+                    ushort seq = buffer.msgid == (byte) MAVLINK_MSG_ID.MISSION_REQUEST
+                        ? buffer.ToStructure<mavlink_mission_request_t>().seq
+                        : buffer.ToStructure<mavlink_mission_request_int_t>().seq;
+
+                    if (seq == 0 || seq == 1)
                     {
-                        //Console.WriteLine(DateTime.Now + " PC getwp " + buffer.msgid);
+                        clearLocalCopy();
+                        return (ReplyAction.Done, true);
                     }
-                }
-            }
+
+                    return (ReplyAction.Ignore, true);
+                },
+                () => generatePacket((byte) MAVLINK_MSG_ID.MISSION_COUNT, req, sysid, compid),
+                700, 3, "setWPTotal");
         }
 
         [Obsolete]
@@ -4052,11 +3927,10 @@ Sarus Operation Planner waits for 2 valid heartbeat packets before connecting
         }
 
         [Obsolete]
-        public async Task<MAV_MISSION_RESULT> setWPAsync(mavlink_mission_item_t req, uint? targetSystem = null, byte? targetComponent = null)
+        public Task<MAV_MISSION_RESULT> setWPAsync(mavlink_mission_item_t req, uint? targetSystem = null, byte? targetComponent = null)
         {
             uint sysid = targetSystem ?? req.target_system;
             byte compid = targetComponent ?? req.target_component;
-            giveComport = true;
 
             ushort index = req.seq;
 
@@ -4064,173 +3938,81 @@ Sarus Operation Planner waits for 2 valid heartbeat packets before connecting
                 req.param1,
                 req.x, req.y, req.z, index, req.target_system, req.target_component);
 
-            // request
-            generatePacket((byte) MAVLINK_MSG_ID.MISSION_ITEM, req, sysid, compid);
-
-            DateTime start = DateTime.Now;
-            int retrys = 10;
-
-            while (true)
+            void store(bool requestIntMissionOnly)
             {
-                if (!(start.AddMilliseconds(450) > DateTime.Now))
+                if (req.current == 2)
                 {
-                    if (retrys > 0)
-                    {
-                        log.Info("setWP Retry " + retrys);
-                        generatePacket((byte) MAVLINK_MSG_ID.MISSION_ITEM, req, sysid, compid);
-
-                        start = DateTime.Now;
-                        retrys--;
-                        continue;
-                    }
-
-                    giveComport = false;
-                    throw new TimeoutException("Timeout on read - setWP");
+                    MAVlist[sysid, compid].GuidedMode = (Locationwp) req;
                 }
-
-                MAVLinkMessage buffer = await readPacketAsync().ConfigureAwait(false);
-                if (buffer.Length > 5)
+                else if (req.current == 3)
                 {
-                    if (buffer.msgid == (byte) MAVLINK_MSG_ID.MISSION_ACK && buffer.sysid == sysid &&
-                        buffer.compid == compid)
+                }
+                else if (requestIntMissionOnly)
+                {
+                    MAVlist[sysid, compid].wps[req.seq] = (Locationwp) req;
+                }
+                else
+                {
+                    if (req.mission_type == (byte) MAV_MISSION_TYPE.MISSION)
+                        MAVlist[sysid, compid].wps[req.seq] = (Locationwp) req;
+                    if (req.mission_type == (byte) MAV_MISSION_TYPE.FENCE)
+                        MAVlist[sysid, compid].fencepoints[req.seq] =
+                            (Locationwp) req;
+                    if (req.mission_type == (byte) MAV_MISSION_TYPE.RALLY)
+                        MAVlist[sysid, compid].rallypoints[req.seq] =
+                            (Locationwp) req;
+                }
+            }
+
+            // Sarus: reply via subscription (see RequestReplyAsync)
+            return RequestReplyAsync(sysid, compid,
+                new[] { MAVLINK_MSG_ID.MISSION_ACK, MAVLINK_MSG_ID.MISSION_REQUEST, MAVLINK_MSG_ID.MISSION_REQUEST_INT },
+                buffer =>
+                {
+                    if (buffer.msgid == (byte) MAVLINK_MSG_ID.MISSION_ACK)
                     {
                         var ans = buffer.ToStructure<mavlink_mission_ack_t>();
                         log.Info("set wp " + index + " ACK 47 : " + buffer.msgid + " ans " +
                                  Enum.Parse(typeof(MAV_MISSION_RESULT), ans.type.ToString()));
                         // check this gcs sent it
                         if (!buffer.IsTargetedTo(gcssysid, (byte)MAV_COMPONENT.MAV_COMP_ID_MISSIONPLANNER))
-                            continue;
+                            return (ReplyAction.Ignore, MAV_MISSION_RESULT.MAV_MISSION_ERROR);
 
-                        if (req.current == 2)
-                        {
-                            MAVlist[sysid, compid].GuidedMode = (Locationwp) req;
-                        }
-                        else if (req.current == 3)
-                        {
-                        }
-                        else
-                        {
-                            if (req.mission_type == (byte) MAV_MISSION_TYPE.MISSION)
-                                MAVlist[sysid, compid].wps[req.seq] = (Locationwp) req;
-                            if (req.mission_type == (byte) MAV_MISSION_TYPE.FENCE)
-                                MAVlist[sysid, compid].fencepoints[req.seq] =
-                                    (Locationwp) req;
-                            if (req.mission_type == (byte) MAV_MISSION_TYPE.RALLY)
-                                MAVlist[sysid, compid].rallypoints[req.seq] =
-                                    (Locationwp) req;
-                        }
-
-                        //if (ans.target_system == req.target_system && ans.target_component == req.target_component)
-                        {
-                            giveComport = false;
-                            return (MAV_MISSION_RESULT) ans.type;
-                        }
+                        store(false);
+                        return (ReplyAction.Done, (MAV_MISSION_RESULT) ans.type);
                     }
-                    else if (buffer.msgid == (byte) MAVLINK_MSG_ID.MISSION_REQUEST &&
-                             buffer.sysid == sysid && buffer.compid == compid)
+
+                    if (!buffer.IsTargetedTo(gcssysid, (byte)MAV_COMPONENT.MAV_COMP_ID_MISSIONPLANNER))
+                        return (ReplyAction.Ignore, MAV_MISSION_RESULT.MAV_MISSION_ERROR);
+
+                    bool isInt = buffer.msgid == (byte) MAVLINK_MSG_ID.MISSION_REQUEST_INT;
+                    ushort seq = isInt
+                        ? buffer.ToStructure<mavlink_mission_request_int_t>().seq
+                        : buffer.ToStructure<mavlink_mission_request_t>().seq;
+
+                    if (seq == (index + 1))
                     {
-                        var ans = buffer.ToStructure<mavlink_mission_request_t>();
-
-                        if (!buffer.IsTargetedTo(gcssysid, (byte)MAV_COMPONENT.MAV_COMP_ID_MISSIONPLANNER))
-                            continue;
-
-                        if (ans.seq == (index + 1))
-                        {
-                            log.Info("set wp doing " + index + " req " + ans.seq + " REQ 40 : " + buffer.msgid);
-                            giveComport = false;
-
-                            if (req.current == 2)
-                            {
-                                MAVlist[sysid, compid].GuidedMode = (Locationwp) req;
-                            }
-                            else if (req.current == 3)
-                            {
-                            }
-                            else
-                            {
-                                if (req.mission_type == (byte) MAV_MISSION_TYPE.MISSION)
-                                    MAVlist[sysid, compid].wps[req.seq] = (Locationwp) req;
-                                if (req.mission_type == (byte) MAV_MISSION_TYPE.FENCE)
-                                    MAVlist[sysid, compid].fencepoints[req.seq] =
-                                        (Locationwp) req;
-                                if (req.mission_type == (byte) MAV_MISSION_TYPE.RALLY)
-                                    MAVlist[sysid, compid].rallypoints[req.seq] =
-                                        (Locationwp) req;
-                            }
-
-                            //if (ans.target_system == req.target_system && ans.target_component == req.target_component)
-                            {
-                                giveComport = false;
-                                return MAV_MISSION_RESULT.MAV_MISSION_ACCEPTED;
-                            }
-                        }
-                        else
-                        {
-                            log.InfoFormat(
-                                "set wp fail doing " + index + " req " + ans.seq + " ACK 47 or REQ 40 : " +
-                                buffer.msgid +
-                                " seq {0} ts {1} tc {2}", req.seq, req.target_system, req.target_component);
-                            // resend point now
-                            start = DateTime.MinValue;
-                        }
+                        log.Info("set wp doing " + index + " req " + seq + " REQ 40 : " + buffer.msgid);
+                        store(isInt);
+                        return (ReplyAction.Done, MAV_MISSION_RESULT.MAV_MISSION_ACCEPTED);
                     }
-                    else if (buffer.msgid == (byte) MAVLINK_MSG_ID.MISSION_REQUEST_INT &&
-                             buffer.sysid == sysid && buffer.compid == compid)
-                    {
-                        var ans = buffer.ToStructure<mavlink_mission_request_int_t>();
 
-                        if (!buffer.IsTargetedTo(gcssysid, (byte)MAV_COMPONENT.MAV_COMP_ID_MISSIONPLANNER))
-                            continue;
-
-                        if (ans.seq == (index + 1))
-                        {
-                            log.Info("set wp doing " + index + " req " + ans.seq + " REQ 40 : " + buffer.msgid);
-                            giveComport = false;
-
-                            if (req.current == 2)
-                            {
-                                MAVlist[sysid, compid].GuidedMode = (Locationwp) req;
-                            }
-                            else if (req.current == 3)
-                            {
-                            }
-                            else
-                            {
-                                MAVlist[sysid, compid].wps[req.seq] = (Locationwp) req;
-                            }
-
-                            //if (ans.target_system == req.target_system && ans.target_component == req.target_component)
-                            {
-                                giveComport = false;
-                                return MAV_MISSION_RESULT.MAV_MISSION_ACCEPTED;
-                            }
-                        }
-                        else
-                        {
-                            log.InfoFormat(
-                                "set wp fail doing " + index + " req " + ans.seq + " ACK 47 or REQ 40 : " +
-                                buffer.msgid +
-                                " seq {0} ts {1} tc {2}", req.seq, req.target_system, req.target_component);
-                            // resend point now
-                            start = DateTime.MinValue;
-                        }
-                    }
-                    else
-                    {
-                        //Console.WriteLine(DateTime.Now + " PC setwp " + buffer.msgid);
-                    }
-                }
-            }
-
-            // return MAV_MISSION_RESULT.MAV_MISSION_INVALID;
+                    log.InfoFormat(
+                        "set wp fail doing " + index + " req " + seq + " ACK 47 or REQ 40 : " +
+                        buffer.msgid +
+                        " seq {0} ts {1} tc {2}", req.seq, req.target_system, req.target_component);
+                    // resend point now
+                    return (ReplyAction.ResendNow, MAV_MISSION_RESULT.MAV_MISSION_ERROR);
+                },
+                () => generatePacket((byte) MAVLINK_MSG_ID.MISSION_ITEM, req, sysid, compid),
+                450, 10, "setWP");
         }
 
         [Obsolete]
-        public async Task<MAV_MISSION_RESULT> setWPAsync(mavlink_mission_item_int_t req, uint? targetSystem = null, byte? targetComponent = null)
+        public Task<MAV_MISSION_RESULT> setWPAsync(mavlink_mission_item_int_t req, uint? targetSystem = null, byte? targetComponent = null)
         {
             uint sysid = targetSystem ?? req.target_system;
             byte compid = targetComponent ?? req.target_component;
-            giveComport = true;
 
             ushort index = req.seq;
 
@@ -4238,124 +4020,66 @@ Sarus Operation Planner waits for 2 valid heartbeat packets before connecting
             //log.InfoFormat("setWPint {7}:{8} {6} frame {0} cmd {1} p1 {2} x {3} y {4} z {5}", req.frame, req.command, req.param1,
             //  req.x / 1.0e7, req.y /1.0e7 , req.z, index, req.target_system, req.target_component);
 
-            // request
-            generatePacket((byte) MAVLINK_MSG_ID.MISSION_ITEM_INT, req, sysid, compid);
-
-            DateTime start = DateTime.Now;
-            int retrys = 10;
-
-            while (true)
+            void store()
             {
-                if (!(start.AddMilliseconds(450) > DateTime.Now))
+                if (req.current == 2)
                 {
-                    if (retrys > 0)
-                    {
-                        log.Info("setWP Retry " + retrys);
-                        generatePacket((byte) MAVLINK_MSG_ID.MISSION_ITEM_INT, req, sysid, compid);
-
-                        start = DateTime.Now;
-                        retrys--;
-                        continue;
-                    }
-
-                    giveComport = false;
-                    throw new TimeoutException("Timeout on read - setWP");
+                    MAVlist[sysid, compid].GuidedMode = (Locationwp) req;
                 }
-
-                MAVLinkMessage buffer = await readPacketAsync().ConfigureAwait(false);
-                if (buffer.Length > 5)
+                else if (req.current == 3)
                 {
-                    if (buffer.msgid == (byte) MAVLINK_MSG_ID.MISSION_ACK && buffer.sysid == sysid &&
-                        buffer.compid == compid)
-                    {
-                        var ans = buffer.ToStructure<mavlink_mission_ack_t>();
-                        log.Info("setWPint resp MISSION_ACK " + buffer.ToJSON(Formatting.None));
-                        //log.Info("set wp " + index + " ACK 47 : " + buffer.msgid + " ans " +
-                        //       Enum.Parse(typeof(MAV_MISSION_RESULT), ans.type.ToString()));
-                        // check this gcs sent it
-                        if (!buffer.IsTargetedTo(gcssysid, (byte)MAV_COMPONENT.MAV_COMP_ID_MISSIONPLANNER))
-                            continue;
-
-                        if (req.current == 2)
-                        {
-                            MAVlist[sysid, compid].GuidedMode = (Locationwp) req;
-                        }
-                        else if (req.current == 3)
-                        {
-                        }
-                        else
-                        {
-                            if (req.mission_type == (byte) MAV_MISSION_TYPE.MISSION)
-                                MAVlist[sysid, compid].wps[req.seq] = (Locationwp) req;
-                            if (req.mission_type == (byte) MAV_MISSION_TYPE.FENCE)
-                                MAVlist[sysid, compid].fencepoints[req.seq] =
-                                    (Locationwp) req;
-                            if (req.mission_type == (byte) MAV_MISSION_TYPE.RALLY)
-                                MAVlist[sysid, compid].rallypoints[req.seq] =
-                                    (Locationwp) req;
-                        }
-
-                        //if (ans.target_system == req.target_system && ans.target_component == req.target_component)
-                        {
-                            giveComport = false;
-                            return (MAV_MISSION_RESULT) ans.type;
-                        }
-                    }
-                    else if (buffer.msgid == (byte) MAVLINK_MSG_ID.MISSION_REQUEST &&
-                             buffer.sysid == sysid && buffer.compid == compid)
-                    {
-                        var ans = buffer.ToStructure<mavlink_mission_request_t>();
-                        if (!buffer.IsTargetedTo(gcssysid, (byte)MAV_COMPONENT.MAV_COMP_ID_MISSIONPLANNER))
-                            continue;
-
-                        if (ans.seq == (index + 1))
-                        {
-                            log.Info("setWPint resp MISSION_REQUEST" + buffer.ToJSON(Formatting.None));
-                            //log.Info("set wp doing " + index + " req " + ans.seq + " REQ 40 : " + buffer.msgid);
-
-                            if (req.current == 2)
-                            {
-                                MAVlist[sysid, compid].GuidedMode = (Locationwp) req;
-                            }
-                            else if (req.current == 3)
-                            {
-                            }
-                            else
-                            {
-                                if (req.mission_type == (byte) MAV_MISSION_TYPE.MISSION)
-                                    MAVlist[sysid, compid].wps[req.seq] = (Locationwp) req;
-                                if (req.mission_type == (byte) MAV_MISSION_TYPE.FENCE)
-                                    MAVlist[sysid, compid].fencepoints[req.seq] =
-                                        (Locationwp) req;
-                                if (req.mission_type == (byte) MAV_MISSION_TYPE.RALLY)
-                                    MAVlist[sysid, compid].rallypoints[req.seq] =
-                                        (Locationwp) req;
-                            }
-
-                            //if (ans.target_system == req.target_system && ans.target_component == req.target_component)
-                            {
-                                giveComport = false;
-                                return MAV_MISSION_RESULT.MAV_MISSION_ACCEPTED;
-                            }
-                        }
-                        else
-                        {
-                            log.InfoFormat(
-                                "set wp fail doing " + index + " req " + ans.seq + " ACK 47 or REQ 40 : " +
-                                buffer.msgid +
-                                " seq {0} ts {1} tc {2}", req.seq, req.target_system, req.target_component);
-                            // resend point now
-                            start = DateTime.MinValue;
-                        }
-                    }
-                    else
-                    {
-                        //Console.WriteLine(DateTime.Now + " PC setwp " + buffer.msgid);
-                    }
+                }
+                else
+                {
+                    if (req.mission_type == (byte) MAV_MISSION_TYPE.MISSION)
+                        MAVlist[sysid, compid].wps[req.seq] = (Locationwp) req;
+                    if (req.mission_type == (byte) MAV_MISSION_TYPE.FENCE)
+                        MAVlist[sysid, compid].fencepoints[req.seq] =
+                            (Locationwp) req;
+                    if (req.mission_type == (byte) MAV_MISSION_TYPE.RALLY)
+                        MAVlist[sysid, compid].rallypoints[req.seq] =
+                            (Locationwp) req;
                 }
             }
 
-            // return MAV_MISSION_RESULT.MAV_MISSION_INVALID;
+            // Sarus: reply via subscription (see RequestReplyAsync). The previous loop answered MISSION_ACK and
+            // MISSION_REQUEST only (not MISSION_REQUEST_INT); that is kept.
+            return RequestReplyAsync(sysid, compid,
+                new[] { MAVLINK_MSG_ID.MISSION_ACK, MAVLINK_MSG_ID.MISSION_REQUEST },
+                buffer =>
+                {
+                    if (buffer.msgid == (byte) MAVLINK_MSG_ID.MISSION_ACK)
+                    {
+                        var ans = buffer.ToStructure<mavlink_mission_ack_t>();
+                        log.Info("setWPint resp MISSION_ACK " + buffer.ToJSON(Formatting.None));
+                        // check this gcs sent it
+                        if (!buffer.IsTargetedTo(gcssysid, (byte)MAV_COMPONENT.MAV_COMP_ID_MISSIONPLANNER))
+                            return (ReplyAction.Ignore, MAV_MISSION_RESULT.MAV_MISSION_ERROR);
+
+                        store();
+                        return (ReplyAction.Done, (MAV_MISSION_RESULT) ans.type);
+                    }
+
+                    var request = buffer.ToStructure<mavlink_mission_request_t>();
+                    if (!buffer.IsTargetedTo(gcssysid, (byte)MAV_COMPONENT.MAV_COMP_ID_MISSIONPLANNER))
+                        return (ReplyAction.Ignore, MAV_MISSION_RESULT.MAV_MISSION_ERROR);
+
+                    if (request.seq == (index + 1))
+                    {
+                        log.Info("setWPint resp MISSION_REQUEST" + buffer.ToJSON(Formatting.None));
+                        store();
+                        return (ReplyAction.Done, MAV_MISSION_RESULT.MAV_MISSION_ACCEPTED);
+                    }
+
+                    log.InfoFormat(
+                        "set wp fail doing " + index + " req " + request.seq + " ACK 47 or REQ 40 : " +
+                        buffer.msgid +
+                        " seq {0} ts {1} tc {2}", req.seq, req.target_system, req.target_component);
+                    // resend point now
+                    return (ReplyAction.ResendNow, MAV_MISSION_RESULT.MAV_MISSION_ERROR);
+                },
+                () => generatePacket((byte) MAVLINK_MSG_ID.MISSION_ITEM_INT, req, sysid, compid),
+                450, 10, "setWP");
         }
 
         public int getRequestedWPNo(uint sysid, byte compid)
@@ -4363,48 +4087,28 @@ Sarus Operation Planner waits for 2 valid heartbeat packets before connecting
             return getRequestedWPNoAsync(sysid, compid).AwaitSync();
         }
 
-        public async Task<int> getRequestedWPNoAsync(uint sysid, byte compid)
+        public Task<int> getRequestedWPNoAsync(uint sysid, byte compid)
         {
-            giveComport = true;
-            DateTime start = DateTime.Now;
-
-            while (true)
-            {
-                if (!(start.AddMilliseconds(1500) > DateTime.Now))
+            // Sarus: reply via subscription (see RequestReplyAsync). Nothing is sent: the vehicle repeats its
+            // request on its own; no retries, 1500 ms like the previous loop.
+            return RequestReplyAsync(sysid, compid,
+                new[] { MAVLINK_MSG_ID.MISSION_REQUEST, MAVLINK_MSG_ID.MISSION_REQUEST_INT }, buffer =>
                 {
-                    giveComport = false;
-                    throw new TimeoutException("Timeout on read - getRequestedWPNo");
-                }
-
-                MAVLinkMessage buffer = await readPacketAsync().ConfigureAwait(false);
-                if (buffer.Length > 5)
-                {
-                    if (buffer.msgid == (byte)MAVLINK_MSG_ID.MISSION_REQUEST && buffer.sysid == sysid &&
-                        buffer.compid == compid)
+                    if (buffer.msgid == (byte)MAVLINK_MSG_ID.MISSION_REQUEST)
                     {
                         var ans = buffer.ToStructure<mavlink_mission_request_t>();
-
                         log.InfoFormat("getRequestedWPNo seq {0} ts {1} tc {2}", ans.seq, ans.target_system,
                             ans.target_component);
-
-                        giveComport = false;
-
-                        return ans.seq;
+                        return (ReplyAction.Done, (int)ans.seq);
                     }
-                    if (buffer.msgid == (byte)MAVLINK_MSG_ID.MISSION_REQUEST_INT && buffer.sysid == sysid &&
-                        buffer.compid == compid)
+                    else
                     {
                         var ans = buffer.ToStructure<mavlink_mission_request_int_t>();
-
                         log.InfoFormat("getRequestedWPNo INT seq {0} ts {1} tc {2}", ans.seq, ans.target_system,
                             ans.target_component);
-
-                        giveComport = false;
-
-                        return ans.seq;
+                        return (ReplyAction.Done, (int)ans.seq);
                     }
-                }
-            }
+                }, null, 1500, 0, "getRequestedWPNo", false);
         }
 
         [Obsolete]
@@ -5575,6 +5279,82 @@ Sarus Operation Planner waits for 2 valid heartbeat packets before connecting
             }
 
             return item.GetHashCode();
+        }
+
+        /// <summary>
+        /// Sarus: what a request/reply handler decided about one received packet.
+        /// </summary>
+        private enum ReplyAction
+        {
+            Ignore,
+            Done,
+            ResendNow
+        }
+
+        /// <summary>
+        /// Sarus: send a request and wait for its reply, received through packet subscriptions so the reply arrives
+        /// whichever thread reads the link. The previous per-function read loops discarded every packet that was
+        /// not their own reply, so two concurrent requests could consume each other's replies (timeouts and failed
+        /// mission transfers although the vehicle had answered). Subscriptions are made before the first send, and
+        /// timeouts/retries match the loops they replace.
+        /// </summary>
+        private async Task<T> RequestReplyAsync<T>(uint sysid, byte compid, MAVLINK_MSG_ID[] replyTypes,
+            Func<MAVLinkMessage, (ReplyAction action, T value)> handle, Action send, int timeoutMs, int retries,
+            string name, bool sendFirst = true)
+        {
+            var results = new System.Collections.Concurrent.ConcurrentQueue<(ReplyAction action, T value)>();
+            var subs = new List<int>();
+            foreach (var type in replyTypes)
+            {
+                subs.Add(SubscribeToPacketType(type, message =>
+                {
+                    var r = handle(message);
+                    if (r.action != ReplyAction.Ignore)
+                        results.Enqueue(r);
+                    return true;
+                }, sysid, compid));
+            }
+
+            giveComport = true;
+            try
+            {
+                if (sendFirst)
+                    send?.Invoke();
+
+                DateTime start = DateTime.Now;
+                while (true)
+                {
+                    while (results.TryDequeue(out var r))
+                    {
+                        if (r.action == ReplyAction.Done)
+                            return r.value;
+                        // ResendNow: the vehicle asked for something else; resend on the retry path
+                        start = DateTime.MinValue;
+                    }
+
+                    if (!(start.AddMilliseconds(timeoutMs) > DateTime.Now))
+                    {
+                        if (retries > 0)
+                        {
+                            log.Info(name + " Retry " + retries);
+                            send?.Invoke();
+                            start = DateTime.Now;
+                            retries--;
+                            continue;
+                        }
+
+                        throw new TimeoutException("Timeout on read - " + name);
+                    }
+
+                    await readPacketAsync().ConfigureAwait(false);
+                }
+            }
+            finally
+            {
+                giveComport = false;
+                foreach (var sub in subs)
+                    UnSubscribeToPacketType(sub);
+            }
         }
 
         public void UnSubscribeToPacketType(int id)
