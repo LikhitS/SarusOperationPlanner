@@ -2458,11 +2458,8 @@ Sarus Operation Planner waits for 2 valid heartbeat packets before connecting
             return setWPCurrentAsync(sysid, compid, index).AwaitSync();
         }
 
-        public async Task<bool> setWPCurrentAsync(uint sysid, byte compid, ushort index)
+        public Task<bool> setWPCurrentAsync(uint sysid, byte compid, ushort index)
         {
-            giveComport = true;
-            MAVLinkMessage buffer;
-
             mavlink_mission_set_current_t req = new mavlink_mission_set_current_t
             {
                 target_system = (byte)(sysid),
@@ -2470,39 +2467,11 @@ Sarus Operation Planner waits for 2 valid heartbeat packets before connecting
                 seq = index
             };
 
-            generatePacket((byte) MAVLINK_MSG_ID.MISSION_SET_CURRENT, req, sysid, compid);
-
-            DateTime start = DateTime.Now;
-            int retrys = 5;
-
-            while (true)
-            {
-                if (!(start.AddMilliseconds(2000) > DateTime.Now))
-                {
-                    if (retrys > 0)
-                    {
-                        log.Info("setWPCurrent Retry " + retrys);
-                        generatePacket((byte) MAVLINK_MSG_ID.MISSION_SET_CURRENT, req, sysid, compid);
-                        start = DateTime.Now;
-                        retrys--;
-                        continue;
-                    }
-
-                    giveComport = false;
-                    throw new TimeoutException("Timeout on read - setWPCurrent");
-                }
-
-                buffer = await readPacketAsync().ConfigureAwait(false);
-                if (buffer.Length > 5)
-                {
-                    if (buffer.msgid == (byte) MAVLINK_MSG_ID.MISSION_CURRENT && buffer.sysid == sysid &&
-                        buffer.compid == req.target_component)
-                    {
-                        giveComport = false;
-                        return true;
-                    }
-                }
-            }
+            // Sarus: reply via subscription (see RequestReplyAsync)
+            return RequestReplyAsync(sysid, compid, new[] { MAVLINK_MSG_ID.MISSION_CURRENT },
+                buffer => (ReplyAction.Done, true),
+                () => generatePacket((byte) MAVLINK_MSG_ID.MISSION_SET_CURRENT, req, sysid, compid),
+                2000, 5, "setWPCurrent");
         }
 
         [Obsolete("Mavlink 09 - use doCommand", true)]
@@ -2853,8 +2822,6 @@ Sarus Operation Planner waits for 2 valid heartbeat packets before connecting
             if (BaseStream == null || BaseStream.IsOpen == false)
                 return false;
 
-            MAVLinkMessage buffer;
-
             mavlink_command_int_t req = new mavlink_command_int_t()
             {
                 target_system = (byte)(sysid),
@@ -2896,61 +2863,57 @@ Sarus Operation Planner waits for 2 valid heartbeat packets before connecting
 
             int timeout = 2000;
 
-            while (true)
+            // Sarus: receive the acknowledgement through a subscription (as in doCommandAsync); a concurrent reader
+            // could otherwise consume and discard it.
+            var acks = new System.Collections.Concurrent.ConcurrentQueue<mavlink_command_ack_t>();
+            var ackSub = SubscribeToPacketType(MAVLINK_MSG_ID.COMMAND_ACK, message =>
             {
-                if (DateTime.Now > GUI.AddMilliseconds(100))
-                {
-                    GUI = DateTime.Now;
+                var a = message.ToStructure<mavlink_command_ack_t>();
+                if (a.command == req.command)
+                    acks.Enqueue(a);
+                return true;
+            }, sysid, req.target_component);
 
-                    uicallback?.Invoke();
-                }
-
-                if (!(start.AddMilliseconds(timeout) > DateTime.Now))
+            try
+            {
+                while (true)
                 {
-                    if (retrys > 0)
+                    if (DateTime.Now > GUI.AddMilliseconds(100))
                     {
-                        log.Info("doCommandIntAsync Retry " + retrys);
-                        generatePacket((byte) MAVLINK_MSG_ID.COMMAND_INT, req, sysid, compid);
-                        start = DateTime.Now;
-                        retrys--;
-                        continue;
+                        GUI = DateTime.Now;
+
+                        uicallback?.Invoke();
                     }
 
-                    giveComport = false;
-                    throw new TimeoutException("Timeout on read - doCommand");
-                }
-
-                buffer = await readPacketAsync().ConfigureAwait(false);
-                if (buffer.Length > 5)
-                {
-                    if (buffer.msgid == (byte) MAVLINK_MSG_ID.COMMAND_ACK && buffer.sysid == sysid &&
-                        buffer.compid == req.target_component)
+                    if (acks.TryDequeue(out var ack))
                     {
-                        var ack = buffer.ToStructure<mavlink_command_ack_t>();
-
-                        if (ack.command != req.command)
-                        {
-                            log.InfoFormat("doCommandIntAsync cmd resp {0} - {1} - Commands dont match",
-                                (MAV_CMD) ack.command,
-                                (MAV_RESULT) ack.result);
-                            continue;
-                        }
-
                         log.InfoFormat("doCommandIntAsync cmd resp {0} - {1}", (MAV_CMD) ack.command,
                             (MAV_RESULT) ack.result);
 
-                        if (ack.result == (byte) MAV_RESULT.ACCEPTED)
-                        {
-                            giveComport = false;
-                            return true;
-                        }
-                        else
-                        {
-                            giveComport = false;
-                            return false;
-                        }
+                        return ack.result == (byte) MAV_RESULT.ACCEPTED;
                     }
+
+                    if (!(start.AddMilliseconds(timeout) > DateTime.Now))
+                    {
+                        if (retrys > 0)
+                        {
+                            log.Info("doCommandIntAsync Retry " + retrys);
+                            generatePacket((byte) MAVLINK_MSG_ID.COMMAND_INT, req, sysid, compid);
+                            start = DateTime.Now;
+                            retrys--;
+                            continue;
+                        }
+
+                        throw new TimeoutException("Timeout on read - doCommand");
+                    }
+
+                    await readPacketAsync().ConfigureAwait(false);
                 }
+            }
+            finally
+            {
+                giveComport = false;
+                UnSubscribeToPacketType(ackSub);
             }
         }
 
