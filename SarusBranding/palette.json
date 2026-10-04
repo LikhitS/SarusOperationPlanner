@@ -1,0 +1,39 @@
+{
+  "name": "Sarus Operation Planner",
+  "notes": "Crane-inspired: ash grey neutrals, sky blue for interaction, crimson reserved for the brand mark. Red/amber/green are kept for flight status only, so brand colour never looks like an alarm.",
+  "brand": {
+    "ink": "#0E1620",
+    "crimson": "#B5263A",
+    "sky": "#2E8FD0"
+  },
+  "dark": {
+    "background": "#11161C",
+    "surface": "#1A2129",
+    "surfaceRaised": "#232C36",
+    "border": "#34414E",
+    "text": "#E7ECF1",
+    "textMuted": "#9AA8B6",
+    "accent": "#3A9FE0",
+    "accentHover": "#62B5EC",
+    "accentText": "#08121B",
+    "logo": "#E7ECF1"
+  },
+  "light": {
+    "background": "#F3F5F7",
+    "surface": "#FFFFFF",
+    "surfaceRaised": "#E9EDF1",
+    "border": "#CDD5DD",
+    "text": "#14202B",
+    "textMuted": "#566472",
+    "accent": "#1A6FAE",
+    "accentHover": "#145A8E",
+    "accentText": "#FFFFFF",
+    "logo": "#0E1620"
+  },
+  "status": {
+    "ok": "#2DB46E",
+    "warning": "#F0A630",
+    "error": "#E5484D",
+    "info": "#3A9FE0"
+  }
+}

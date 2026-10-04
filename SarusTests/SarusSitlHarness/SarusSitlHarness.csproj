@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Drives the real ground station GUI against a running ArduPilot SITL. Copied next to MissionPlanner.exe to run. -->
+  <PropertyGroup>
+    <TargetFramework>net472</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <UseWindowsForms>true</UseWindowsForms>
+    <LangVersion>latest</LangVersion>
+    <MPBin Condition="'$(MPBin)' == ''">C:\dev\Sarus\SarusOperationPlanner\bin\Release\net461</MPBin>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="MissionPlanner"><HintPath>$(MPBin)\MissionPlanner.exe</HintPath><Private>false</Private></Reference>
+    <Reference Include="MAVLink"><HintPath>$(MPBin)\MAVLink.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="MissionPlanner.ArduPilot"><HintPath>$(MPBin)\MissionPlanner.ArduPilot.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="MissionPlanner.Comms"><HintPath>$(MPBin)\MissionPlanner.Comms.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="MissionPlanner.Controls"><HintPath>$(MPBin)\MissionPlanner.Controls.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="System.Memory"><HintPath>$(MPBin)\System.Memory.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Interfaces"><HintPath>$(MPBin)\Interfaces.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="MissionPlanner.Utilities"><HintPath>$(MPBin)\MissionPlanner.Utilities.dll</HintPath><Private>false</Private></Reference>
+  </ItemGroup>
+</Project>
