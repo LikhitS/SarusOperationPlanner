@@ -707,8 +707,9 @@ static class Harness
             else Info("read-only param", p + " not present");
         }
 
-        // D. Value the firmware re-limits AFTER acknowledging the write (found by the sweep):
-        //    Q_LOIT_ACC_MAX_M acknowledged 9.81 but runs a lower value. Must be detected.
+        // D. Value the firmware may re-limit AFTER acknowledging the write (found by the sweep): ArduPilot caps
+        //    Q_LOIT_ACC_MAX_M at g*tan(max lean angle), but only while the loiter controller runs (e.g. in QLOITER).
+        //    Either way the grid must show what the aircraft runs, and the warning appears exactly when it differs.
         if (!copterProfile && !roverProfile && mav.param.ContainsKey("Q_LOIT_ACC_MAX_M"))
         {
             const string p = "Q_LOIT_ACC_MAX_M";
@@ -723,8 +724,12 @@ static class Harness
             write.Invoke(raw, new object[] { null, EventArgs.Empty });
             await Task.Delay(1000);
             double fresh = port.GetParam(mav.sysid, mav.compid, p);
-            Check(dialogLog.Skip(before).Any(d => d.Contains("did not keep these values") && d.Contains(p)),
-                "value re-limited after acknowledgement: reported", $"aircraft runs {fresh}");
+            bool limited = Math.Abs(fresh - 9.81) > 1e-3;
+            bool reported = dialogLog.Skip(before).Any(d => d.Contains("did not keep these values") && d.Contains(p));
+            Info("re-limit", $"mode {mav.cs.mode}, aircraft runs {fresh}" + (limited ? " (limited by firmware)" : " (kept as sent)"));
+            Check(reported == limited, "value re-limited after acknowledgement: warned exactly when the aircraft changed it",
+                $"aircraft runs {fresh}, warning shown {reported}");
+            if (!limited) expectedDialogs.RemoveAll(x => x.fragment == "did not keep these values");
             Check(Math.Abs(double.Parse(c.Value.ToString()) - fresh) < 1e-3,
                 "value re-limited after acknowledgement: grid shows aircraft value", $"grid {c.Value} aircraft {fresh}");
             port.setParam(mav.sysid, mav.compid, p, orig, true);

@@ -5,7 +5,9 @@ param(
     [string]$Bin = "C:\dev\Sarus\SarusOperationPlanner\bin\Release\net461",
     [string]$AppExe = "MissionPlanner.exe",
     [ValidateSet("quadplane","copter","rover")][string]$Vehicle = "quadplane",
-    [switch]$BadLink
+    [switch]$BadLink,
+    # simulator build: Stable = ArduPilot SITL from firmware.ardupilot.org, Sarus = SITL built from the Sarus fork
+    [ValidateSet("Stable","Sarus")][string]$SimSet = "Stable"
 )
 $ErrorActionPreference = 'Stop'
 $root = "C:\dev\Sarus"
@@ -19,9 +21,9 @@ Start-Sleep 1
 New-Item -ItemType Directory -Force $run | Out-Null
 Get-ChildItem $run -Force | Remove-Item -Recurse -Force
 $env:SARUS_VEHICLE = $Vehicle
-if ($Vehicle -eq 'copter') { $simDir = 'CopterStable'; $exe = 'ArduCopter.exe'; $model = '-M+'; $parm = 'copter.parm' }
-elseif ($Vehicle -eq 'rover') { $simDir = 'RoverStable'; $exe = 'ArduRover.exe'; $model = '-Mrover'; $parm = 'rover.parm' }
-else { $simDir = 'PlaneStable'; $exe = 'ArduPlane.exe'; $model = '-Mquadplane'; $parm = 'quadplane.parm' }
+if ($Vehicle -eq 'copter') { $simDir = "Copter$SimSet"; $exe = 'ArduCopter.exe'; $model = '-M+'; $parm = 'copter.parm' }
+elseif ($Vehicle -eq 'rover') { $simDir = "Rover$SimSet"; $exe = 'ArduRover.exe'; $model = '-Mrover'; $parm = 'rover.parm' }
+else { $simDir = "Plane$SimSet"; $exe = 'ArduPlane.exe'; $model = '-Mquadplane'; $parm = 'quadplane.parm' }
 Copy-Item "$root\sitl\$simDir\*" $run
 Copy-Item "$root\sitl\$parm" $run
 $sitl = Start-Process "$run\$exe" -ArgumentList $model,'--home','-35.363261,149.165230,584,353','-s1','-w','--serial0','tcp:0','--defaults',$parm `
