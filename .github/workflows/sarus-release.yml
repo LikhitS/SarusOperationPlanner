@@ -83,8 +83,86 @@ jobs:
           name: SarusOperationPlanner
           path: out\*
 
+  # Installs the MSI on clean cloud Windows machines (Server 2022 ~ Windows 10, Server 2025 ~ Windows 11),
+  # next to an existing stock Mission Planner, starts it, and uninstalls it again.
+  install-test:
+    needs: build
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-2022, windows-2025]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: SarusOperationPlanner
+          path: out
+
+      - name: Install stock Mission Planner first
+        shell: pwsh
+        run: |
+          Invoke-WebRequest https://firmware.ardupilot.org/Tools/MissionPlanner/MissionPlanner-latest.msi -OutFile mp.msi
+          $p = Start-Process msiexec -ArgumentList '/i','mp.msi','/qn','/norestart','/l*v','mp-install.log' -Wait -PassThru
+          "Mission Planner install exit $($p.ExitCode)"
+          if (-not (Test-Path "${env:ProgramFiles(x86)}\Mission Planner\MissionPlanner.exe")) { throw "Mission Planner not installed" }
+
+      - name: Install Sarus (silent)
+        shell: pwsh
+        run: |
+          $msi = (Get-ChildItem out -Filter *.msi | Select-Object -First 1).FullName
+          $p = Start-Process msiexec -ArgumentList '/i',"`"$msi`"",'/qn','/norestart','/l*v','sarus-install.log' -Wait -PassThru
+          "Sarus install exit $($p.ExitCode)"
+          if ($p.ExitCode -ne 0 -and $p.ExitCode -ne 3010) { Get-Content sarus-install.log -Tail 60; throw "Sarus install failed" }
+          $exe = "${env:ProgramFiles(x86)}\Sarus Operation Planner\MissionPlanner.exe"
+          if (-not (Test-Path $exe)) { throw "Sarus files missing" }
+          if (-not (Test-Path "${env:ProgramFiles(x86)}\Mission Planner\MissionPlanner.exe")) { throw "Installing Sarus removed Mission Planner" }
+          $apps = Get-ItemProperty 'HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*','HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*' -ErrorAction SilentlyContinue |
+            Where-Object { $_.DisplayName -match 'Sarus|Mission Planner' } | Select-Object DisplayName, DisplayVersion, Publisher
+          $apps | Format-Table -AutoSize | Out-String | Write-Host
+          if (-not ($apps | Where-Object DisplayName -eq 'Sarus Operation Planner')) { throw "Sarus not in Apps list" }
+          if (-not ($apps | Where-Object DisplayName -eq 'Mission Planner')) { throw "Mission Planner no longer in Apps list" }
+          $lnk = Get-ChildItem "$env:ProgramData\Microsoft\Windows\Start Menu\Programs" -Recurse -Filter "Sarus Operation Planner*.lnk" -ErrorAction SilentlyContinue
+          if (-not $lnk) { throw "Start menu shortcut missing" }
+
+      - name: Start Sarus and keep it running
+        shell: pwsh
+        run: |
+          $exe = "${env:ProgramFiles(x86)}\Sarus Operation Planner\MissionPlanner.exe"
+          $p = Start-Process $exe -PassThru
+          Start-Sleep 60
+          if ($p.HasExited) { throw "Sarus exited early with code $($p.ExitCode)" }
+          "running after 60 s, working set $([math]::Round($p.WorkingSet64/1MB)) MB"
+          $data = "$env:USERPROFILE\Documents\Sarus Operation Planner"
+          if (-not (Test-Path $data)) { throw "Sarus data folder not created" }
+          if (Test-Path "$env:USERPROFILE\Documents\Mission Planner") { "note: a Mission Planner data folder also exists (from the stock install)" }
+          Stop-Process -Id $p.Id -Force
+
+      - name: Uninstall Sarus, Mission Planner must remain
+        shell: pwsh
+        run: |
+          $code = (Get-ItemProperty 'HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*','HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*' -ErrorAction SilentlyContinue |
+            Where-Object DisplayName -eq 'Sarus Operation Planner').PSChildName
+          $p = Start-Process msiexec -ArgumentList '/x',$code,'/qn','/norestart' -Wait -PassThru
+          "Sarus uninstall exit $($p.ExitCode)"
+          if (Test-Path "${env:ProgramFiles(x86)}\Sarus Operation Planner\MissionPlanner.exe") { throw "Sarus files left behind" }
+          if (-not (Test-Path "${env:ProgramFiles(x86)}\Mission Planner\MissionPlanner.exe")) { throw "Uninstalling Sarus removed Mission Planner" }
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: install-logs-${{ matrix.os }}
+          path: '*.log'
+
+  release:
+    needs: [build, install-test]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: SarusOperationPlanner
+          path: out
       - name: Publish release
-        if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
           files: out/*

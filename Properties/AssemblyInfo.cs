@@ -30,3 +30,5 @@ using System.Runtime.InteropServices;
 //
 [assembly: AssemblyVersion("1.3.*")]
 [assembly: AssemblyFileVersion("1.3.83")]
+// Sarus product version (window title, installer, Apps list); the file version above is the Mission Planner base
+[assembly: AssemblyInformationalVersion("1.0.0")]
