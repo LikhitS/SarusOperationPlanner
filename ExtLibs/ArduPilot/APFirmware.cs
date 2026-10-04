@@ -129,6 +129,10 @@ namespace MissionPlanner.ArduPilot
                     log.Info(Manifest.Firmware?.Length);
 
                     APFirmware.GetListAppend("https://raw.githubusercontent.com/CubePilot/periph-manifest/main/manifest.json");
+
+                    // Sarus: Sarus firmware builds (same board identities as ArduPilot, file names start with "Sarus-"),
+                    // listed together with ArduPilot's in Install Firmware
+                    APFirmware.GetListAppend("https://raw.githubusercontent.com/LikhitS/ardupilot/sarus-manifest/manifest.json");
                 }
                 catch (Exception ex)
                 {
