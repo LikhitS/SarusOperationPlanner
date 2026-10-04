@@ -135,7 +135,9 @@ jobs:
           $apps | Format-Table -AutoSize | Out-String | Write-Host
           if (-not ($apps | Where-Object DisplayName -eq 'Sarus Operation Planner')) { throw "Sarus not in Apps list" }
           if (-not ($apps | Where-Object DisplayName -eq 'Mission Planner')) { throw "Mission Planner no longer in Apps list" }
-          $lnk = Get-ChildItem "$env:ProgramData\Microsoft\Windows\Start Menu\Programs" -Recurse -Filter "Sarus Operation Planner*.lnk" -ErrorAction SilentlyContinue
+          # like Mission Planner, the shortcut goes to the installing user's Start menu (no ALLUSERS)
+          $lnk = Get-ChildItem "$env:ProgramData\Microsoft\Windows\Start Menu\Programs", "$env:APPDATA\Microsoft\Windows\Start Menu\Programs" -Recurse -Filter "Sarus Operation Planner*.lnk" -ErrorAction SilentlyContinue
+          $lnk | ForEach-Object { "shortcut: $($_.FullName)" }
           if (-not $lnk) { throw "Start menu shortcut missing" }
 
       - name: Start Sarus and keep it running
