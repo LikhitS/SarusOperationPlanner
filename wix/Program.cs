@@ -197,12 +197,22 @@ namespace wix
     Directory='Drivers'  ExeCommand='[Drivers]DPInstx86.exe' Return='ignore' Impersonate='no'/>
     <CustomAction  Id='Install_signed_Driver64' Execute='deferred' 
     Directory='Drivers'  ExeCommand='[Drivers]DPInstx64.exe' Return='ignore' Impersonate='no'/>
+    <!-- Sarus: silent installs (msiexec /qn or /qb) cannot click through the DPInst wizard and used to hang
+         forever; there DPInst runs quiet (/q), without EULA (/se) and without wizard (/sw). -->
+    <CustomAction  Id='Install_signed_Driver86_quiet' Execute='deferred' 
+    Directory='Drivers'  ExeCommand='[Drivers]DPInstx86.exe /q /se /sw' Return='ignore' Impersonate='no'/>
+    <CustomAction  Id='Install_signed_Driver64_quiet' Execute='deferred' 
+    Directory='Drivers'  ExeCommand='[Drivers]DPInstx64.exe /q /se /sw' Return='ignore' Impersonate='no'/>
 
     <InstallExecuteSequence>  
     <Custom Action=""Install_signed_Driver86""  After=""CreateShortcuts"">NOT 
-    Installed AND NOT VersionNT64</Custom>
+    Installed AND NOT VersionNT64 AND UILevel &gt; 3</Custom>
     <Custom Action=""Install_signed_Driver64""  After=""CreateShortcuts"">NOT 
-    Installed AND VersionNT64</Custom>
+    Installed AND VersionNT64 AND UILevel &gt; 3</Custom>
+    <Custom Action=""Install_signed_Driver86_quiet""  After=""CreateShortcuts"">NOT 
+    Installed AND NOT VersionNT64 AND UILevel &lt;= 3</Custom>
+    <Custom Action=""Install_signed_Driver64_quiet""  After=""CreateShortcuts"">NOT 
+    Installed AND VersionNT64 AND UILevel &lt;= 3</Custom>
     <Custom Action=""Drivercleanup""  After=""CreateShortcuts"">NOT Installed</Custom>
     </InstallExecuteSequence>
 

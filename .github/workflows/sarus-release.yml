@@ -100,19 +100,33 @@ jobs:
 
       - name: Install stock Mission Planner first
         shell: pwsh
+        timeout-minutes: 20
+        # Stock Mission Planner starts the DPInst driver wizard even in a silent install, where nobody can click it,
+        # so the install never finishes. Close that wizard after 2 minutes (the MSI ignores its exit code).
         run: |
           Invoke-WebRequest https://firmware.ardupilot.org/Tools/MissionPlanner/MissionPlanner-latest.msi -OutFile mp.msi
-          $p = Start-Process msiexec -ArgumentList '/i','mp.msi','/qn','/norestart','/l*v','mp-install.log' -Wait -PassThru
+          $p = Start-Process msiexec -ArgumentList '/i','mp.msi','/qn','/norestart','/l*v','mp-install.log' -PassThru
+          $seen = $null
+          while (-not $p.HasExited) {
+            $d = Get-Process DPInstx64, DPInstx86 -ErrorAction SilentlyContinue
+            if ($d -and -not $seen) { $seen = Get-Date }
+            if ($d -and $seen -and ((Get-Date) - $seen).TotalSeconds -gt 120) { "closing stock DPInst wizard"; $d | Stop-Process -Force }
+            Start-Sleep 5
+          }
           "Mission Planner install exit $($p.ExitCode)"
           if (-not (Test-Path "${env:ProgramFiles(x86)}\Mission Planner\MissionPlanner.exe")) { throw "Mission Planner not installed" }
 
       - name: Install Sarus (silent)
         shell: pwsh
+        # must finish on its own: Sarus runs DPInst quietly in silent installs
+        timeout-minutes: 15
         run: |
           $msi = (Get-ChildItem out -Filter *.msi | Select-Object -First 1).FullName
           $p = Start-Process msiexec -ArgumentList '/i',"`"$msi`"",'/qn','/norestart','/l*v','sarus-install.log' -Wait -PassThru
           "Sarus install exit $($p.ExitCode)"
           if ($p.ExitCode -ne 0 -and $p.ExitCode -ne 3010) { Get-Content sarus-install.log -Tail 60; throw "Sarus install failed" }
+          if (-not (Select-String sarus-install.log -Pattern 'Action=Install_signed_Driver64_quiet' -SimpleMatch -Quiet)) { throw "quiet driver install did not run" }
+          if (Test-Path "$env:WINDIR\DPINST.LOG") { Copy-Item "$env:WINDIR\DPINST.LOG" dpinst.log; Get-Content dpinst.log -Tail 15 }
           $exe = "${env:ProgramFiles(x86)}\Sarus Operation Planner\MissionPlanner.exe"
           if (-not (Test-Path $exe)) { throw "Sarus files missing" }
           if (-not (Test-Path "${env:ProgramFiles(x86)}\Mission Planner\MissionPlanner.exe")) { throw "Installing Sarus removed Mission Planner" }
@@ -139,6 +153,7 @@ jobs:
 
       - name: Uninstall Sarus, Mission Planner must remain
         shell: pwsh
+        timeout-minutes: 15
         run: |
           $code = (Get-ItemProperty 'HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*','HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*' -ErrorAction SilentlyContinue |
             Where-Object DisplayName -eq 'Sarus Operation Planner').PSChildName
