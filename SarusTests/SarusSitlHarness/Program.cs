@@ -613,6 +613,7 @@ static class Harness
 
         var mav = port.MAV;
         bool copterProfile = Environment.GetEnvironmentVariable("SARUS_VEHICLE") == "copter";
+        bool roverProfile = Environment.GetEnvironmentVariable("SARUS_VEHICLE") == "rover";
         var raw = new MissionPlanner.GCSViews.ConfigurationView.ConfigRawParams();
         var host = new System.Windows.Forms.Form { Width = 1300, Height = 800, Text = "param editor test" };
         raw.Dock = System.Windows.Forms.DockStyle.Fill;
@@ -631,11 +632,12 @@ static class Harness
 
         // A. Out of range: accepted without a prompt, flagged amber, written as entered
         {
-            const string p = "TECS_CLMB_MAX";
+            string p = roverProfile ? "ATC_STR_RAT_P" : "TECS_CLMB_MAX";
+            double outOfRange = roverProfile ? 50 : 1000;
             double orig = mav.param[p].Value;
             int dialogsBefore = dialogLog.Count;
             var c = Cell(p);
-            c.Value = "1000";
+            c.Value = outOfRange.ToString(System.Globalization.CultureInfo.CurrentCulture);
             await Task.Delay(800);
             Check(dialogLog.Count == dialogsBefore, "out-of-range value: no blocking prompt");
             Check(c.Style.BackColor.ToArgb() == amber.ToArgb(), "out-of-range value: cell flagged amber");
@@ -644,7 +646,7 @@ static class Harness
             expectedDialogs.Add(("successfully saved", "ok"));
             write.Invoke(raw, new object[] { null, EventArgs.Empty });
             await Task.Delay(1000);
-            Check(Math.Abs(mav.param[p].Value - 1000) < 1e-3, "out-of-range value written to aircraft", $"{mav.param[p].Value}");
+            Check(Math.Abs(mav.param[p].Value - outOfRange) < 1e-3, "out-of-range value written to aircraft", $"{p} {mav.param[p].Value}");
             Check(c.Style.BackColor.ToArgb() != amber.ToArgb() && !(c.ToolTipText ?? "").StartsWith("WARNING"),
                 "out-of-range value: warning cleared after successful write");
             port.setParam(mav.sysid, mav.compid, p, orig);
@@ -652,7 +654,7 @@ static class Harness
 
         // B. Aircraft does not keep the value (fraction into an integer parameter): detected and shown
         {
-            const string p = "FLTMODE1";
+            string p = roverProfile ? "MODE1" : "FLTMODE1";
             double orig = mav.param[p].Value;
             var c = Cell(p);
             c.Value = (orig + 0.5).ToString(System.Globalization.CultureInfo.CurrentCulture);
@@ -690,16 +692,24 @@ static class Harness
                 expectedDialogs.Add(("successfully saved", "ok"));
                 write.Invoke(raw, new object[] { null, EventArgs.Empty });
                 await Task.Delay(1500);
+                // The firmware recalibrates ground pressure by itself while disarmed (Rover does so continuously),
+                // so compare the grid with the value the aircraft reported when Sarus re-read it after the write.
                 double kept = mav.param[p].Value;
+                var keptMsg = dialogLog.Skip(before).LastOrDefault(d => d.Contains(p + ": sent"));
+                if (keptMsg != null)
+                {
+                    var m = System.Text.RegularExpressions.Regex.Match(keptMsg, System.Text.RegularExpressions.Regex.Escape(p) + @": sent \S+, aircraft kept (\S+)");
+                    if (m.Success) kept = double.Parse(m.Groups[1].Value, System.Globalization.CultureInfo.CurrentCulture);
+                }
                 Check(Math.Abs(double.Parse(c.Value.ToString()) - kept) < Math.Max(1e-3, Math.Abs(kept) * 1e-6),
-                    "read-only param: grid matches aircraft after write", $"grid {c.Value} aircraft {kept}");
+                    "read-only param: grid matches aircraft after write", $"grid {c.Value} aircraft re-read {kept}, now {mav.param[p].Value}");
             }
             else Info("read-only param", p + " not present");
         }
 
         // D. Value the firmware re-limits AFTER acknowledging the write (found by the sweep):
         //    Q_LOIT_ACC_MAX_M acknowledged 9.81 but runs a lower value. Must be detected.
-        if (!copterProfile && mav.param.ContainsKey("Q_LOIT_ACC_MAX_M"))
+        if (!copterProfile && !roverProfile && mav.param.ContainsKey("Q_LOIT_ACC_MAX_M"))
         {
             const string p = "Q_LOIT_ACC_MAX_M";
             double orig = mav.param[p].Value;
@@ -739,9 +749,10 @@ static class Harness
         StartStallWatchdog(mav);
         uint sid = mav.sysid;
         byte cid = mav.compid;
-        // Vehicle profile: quadplane (default) or copter (SARUS_VEHICLE)
+        // Vehicle profile: quadplane (default), copter or rover (SARUS_VEHICLE)
         bool copter = Environment.GetEnvironmentVariable("SARUS_VEHICLE") == "copter";
-        Check(mav.cs.firmware == (copter ? Firmwares.ArduCopter2 : Firmwares.ArduPlane), "vehicle type", mav.cs.firmware.ToString());
+        bool rover = Environment.GetEnvironmentVariable("SARUS_VEHICLE") == "rover";
+        Check(mav.cs.firmware == (rover ? Firmwares.ArduRover : copter ? Firmwares.ArduCopter2 : Firmwares.ArduPlane), "vehicle type", mav.cs.firmware.ToString());
         Info("version", mav.VersionString);
 
         bool badLink = linkControl != null;
@@ -750,12 +761,15 @@ static class Harness
         {
             // Parameters
             Check(mav.param.Count > 500, "param download", $"{mav.param.Count} params");
-            if (copter)
+            if (rover)
+                Check(mav.param.ContainsKey("CRUISE_SPEED") && mav.param.ContainsKey("MODE1"), "rover parameters present");
+            else if (copter)
                 Check(mav.param.ContainsKey("FRAME_CLASS"), "copter frame parameters present");
             else
                 Check(mav.param.ContainsKey("Q_ENABLE") && mav.param["Q_ENABLE"].Value == 1, "quadplane enabled", "Q_ENABLE=1");
 
-            var tuneParams = copter ? new[] { "ATC_RAT_RLL_P", "ATC_RAT_PIT_P", "PSC_D_ACC_P", "WP_SPD" }
+            var tuneParams = rover ? new[] { "ATC_STR_RAT_P", "ATC_SPEED_P", "CRUISE_SPEED", "WP_SPEED", "TURN_RADIUS" }
+                                    : copter ? new[] { "ATC_RAT_RLL_P", "ATC_RAT_PIT_P", "PSC_D_ACC_P", "WP_SPD" }
                                     : new[] { "TECS_CLMB_MAX", "TECS_SINK_MAX", "TECS_TIME_CONST", "Q_A_ANGLE_MAX" };
             foreach (var name in tuneParams)
             {
@@ -771,7 +785,8 @@ static class Harness
             }
 
             // Extreme values: record what the firmware keeps. INFO only; this documents firmware clamping.
-            var extremes = copter ? new[] { ("ATC_RAT_RLL_P", 50.0), ("WP_SPD", 100000.0), ("ANGLE_MAX", 9000.0) }
+            var extremes = rover ? new[] { ("ATC_STR_RAT_P", 50.0), ("CRUISE_SPEED", 1000.0), ("WP_SPEED", 1000.0) }
+                                  : copter ? new[] { ("ATC_RAT_RLL_P", 50.0), ("WP_SPD", 100000.0), ("ANGLE_MAX", 9000.0) }
                                   : new[] { ("TECS_CLMB_MAX", 1000.0), ("TECS_PITCH_MAX", 89.0), ("Q_A_ANGLE_MAX", 89.0) };
             foreach (var (name, extreme) in extremes)
             {
@@ -786,7 +801,16 @@ static class Harness
 
             // Mission: home, VTOL takeoff, fixed-wing waypoint, VTOL land
             double hlat = -35.363261, hlng = 149.165230;
-            var mission = copter
+            var mission = rover
+                ? new List<Locationwp>
+                {
+                    new Locationwp { id = (ushort)MAVLink.MAV_CMD.WAYPOINT, lat = hlat, lng = hlng, alt = 584, frame = 0 },
+                    new Locationwp { id = (ushort)MAVLink.MAV_CMD.WAYPOINT, lat = hlat + 0.0007, lng = hlng, alt = 0, frame = 3 },
+                    new Locationwp { id = (ushort)MAVLink.MAV_CMD.WAYPOINT, lat = hlat + 0.0007, lng = hlng + 0.0009, alt = 0, frame = 3 },
+                    new Locationwp { id = (ushort)MAVLink.MAV_CMD.WAYPOINT, lat = hlat, lng = hlng + 0.0009, alt = 0, frame = 3 },
+                    new Locationwp { id = (ushort)MAVLink.MAV_CMD.RETURN_TO_LAUNCH, frame = 3 },
+                }
+                : copter
                 ? new List<Locationwp>
                 {
                     new Locationwp { id = (ushort)MAVLink.MAV_CMD.WAYPOINT, lat = hlat, lng = hlng, alt = 584, frame = 0 },
@@ -814,7 +838,7 @@ static class Harness
             }
 
             // Mode changes
-            foreach (var mode in copter ? new[] { "Stabilize", "AltHold", "Loiter" } : new[] { "QHOVER", "FBWA", "QLOITER" })
+            foreach (var mode in rover ? new[] { "Hold", "Steering", "Loiter", "Manual" } : copter ? new[] { "Stabilize", "AltHold", "Loiter" } : new[] { "QHOVER", "FBWA", "QLOITER" })
             {
                 port.setMode(sid, cid, mode);
                 Check(await WaitFor(() => mav.cs.mode.ToUpper() == mode.ToUpper(), 10), "mode " + mode, mav.cs.mode);
@@ -847,6 +871,43 @@ static class Harness
             Check(armed && await WaitFor(() => mav.cs.armed, 5), "arm in AUTO");
             if (!armed) return;
 
+            if (rover)
+            {
+                // Rover: drive the square, return to launch, stop and disarm
+                Check(await WaitFor(() => mav.cs.groundspeed > 2, 60), "rover driving in AUTO", $"gs {mav.cs.groundspeed:F1}");
+                Check(await WaitFor(() => mav.cs.wpno >= 3, 180), "rover reached waypoint 3", $"wp {mav.cs.wpno}");
+                // the mission's RETURN_TO_LAUNCH item runs inside AUTO (the mode stays Auto)
+                Check(await WaitFor(() => mav.cs.wpno >= 4, 180), "rover started return to launch", $"wp {mav.cs.wpno}, mode {mav.cs.mode}");
+                Check(await WaitFor(() => mav.cs.DistToHome < 5 && mav.cs.groundspeed < 0.3, 180), "rover back home and stopped", $"{mav.cs.DistToHome:F1} m, gs {mav.cs.groundspeed:F1}");
+                bool disarmed = false;
+                try { disarmed = port.doARM(sid, cid, false); } catch { }
+                Check(disarmed && await WaitFor(() => !mav.cs.armed, 10), "rover disarm");
+                await Task.Delay(3000);
+
+                // DataFlash log list (DATA > DataFlash Logs > Download via MAVLink uses GetLogList)
+#pragma warning disable CS0612
+                var logs = port.GetLogList();
+                Check(logs.Count > 0, "log list (LOG_ENTRY)", $"{logs.Count} logs, last {logs.LastOrDefault().size} bytes");
+                // same request while parameter reads run in parallel: no reply may be lost
+                int paramOk = 0, paramFail = 0, listOk = 0, listFail = 0;
+                var stop = DateTime.Now.AddSeconds(20);
+                var reader = Task.Run(() =>
+                {
+                    while (DateTime.Now < stop)
+                    {
+                        try { port.GetParam(sid, cid, "CRUISE_SPEED"); paramOk++; } catch { paramFail++; }
+                    }
+                });
+                while (DateTime.Now < stop)
+                {
+                    try { if (port.GetLogList().Count == logs.Count) listOk++; else listFail++; } catch { listFail++; }
+                }
+                await reader;
+#pragma warning restore CS0612
+                Check(listFail == 0 && paramFail == 0 && listOk > 0, "log list under concurrent parameter reads",
+                    $"log lists ok {listOk} failed {listFail}; param reads ok {paramOk} failed {paramFail}");
+                return;
+            }
             Check(await WaitFor(() => mav.cs.alt > 25, 90), "VTOL takeoff reached 25m", $"alt {mav.cs.alt:F1}");
             if (badLink)
             {

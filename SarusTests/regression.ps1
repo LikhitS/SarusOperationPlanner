@@ -27,6 +27,18 @@ Clear-SarusEnv
 & powershell -ExecutionPolicy Bypass -File "$root\tests\run-sitl-checks.ps1" -Name "$Tag-copter" -Vehicle copter | Out-Null
 Step "copter flight" "$root\tests\report-$Tag-copter.txt"
 
+# 3b. rover full drive + param editor checks + log list
+Clear-SarusEnv; $env:SARUS_PARAM_EDITOR_CHECKS = "1"
+& powershell -ExecutionPolicy Bypass -File "$root\tests\run-sitl-checks.ps1" -Name "$Tag-rover" -Vehicle rover | Out-Null
+Step "rover drive" "$root\tests\report-$Tag-rover.txt"
+
+# 3c. rover parameter sweep
+foreach ($skip in 0, 400, 800, 1200) {
+    Clear-SarusEnv; $env:SARUS_QUICK = "1"; $env:SARUS_PARAM_SWEEP = "1"; $env:SARUS_PARAM_SWEEP_RANGE = "$skip,400"
+    & powershell -ExecutionPolicy Bypass -File "$root\tests\run-sitl-checks.ps1" -Name "$Tag-rover-sweep-$skip" -Vehicle rover | Out-Null
+    Step "rover sweep part $(($skip / 400) + 1)/4" "$root\tests\report-$Tag-rover-sweep-$skip.txt"
+}
+
 # 4. bad link flight
 Clear-SarusEnv
 & powershell -ExecutionPolicy Bypass -File "$root\tests\run-sitl-checks.ps1" -Name "$Tag-badlink" -BadLink | Out-Null

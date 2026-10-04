@@ -6,8 +6,9 @@ param(
     [Parameter(Mandatory)][string]$Out
 )
 
+# SarusTests / SarusBranding hold the test tools and logo sources: in the repo but not part of the built app
 $files = Get-ChildItem $Src -Recurse -Include *.cs -File |
-    Where-Object { $_.FullName -notmatch '\\ExtLibs\\mono\\|\\obj\\|\\bin\\' }
+    Where-Object { $_.FullName -notmatch '\\ExtLibs\\mono\\|\\obj\\|\\bin\\|\\SarusTests\\|\\SarusBranding\\' }
 
 $lines = New-Object System.Collections.Generic.List[string]
 foreach ($f in $files) {
@@ -40,7 +41,7 @@ foreach ($f in $files) {
 }
 # Captions and shortcuts stored in the default-language resource files (localised .xx.resx are skipped)
 $resx = Get-ChildItem $Src -Recurse -Filter *.resx -File |
-    Where-Object { $_.FullName -notmatch '\\ExtLibs\\mono\\|\\obj\\|\\bin\\' -and $_.Name -notmatch '\.[a-z]{2}(-[A-Za-z]{2,4})?\.resx$' }
+    Where-Object { $_.FullName -notmatch '\\ExtLibs\\mono\\|\\obj\\|\\bin\\|\\SarusTests\\|\\SarusBranding\\' -and $_.Name -notmatch '\.[a-z]{2}(-[A-Za-z]{2,4})?\.resx$' }
 foreach ($f in $resx) {
     $rel = $f.FullName.Substring($Src.Length + 1)
     try { [xml]$x = [IO.File]::ReadAllText($f.FullName) } catch { $lines.Add("RESXERR`t$rel"); continue }

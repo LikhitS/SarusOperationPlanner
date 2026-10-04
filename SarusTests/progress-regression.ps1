@@ -1,5 +1,5 @@
-# Progress lines for regression.ps1 (11 steps). Read-only.
-$total = 11; $last = ''
+# Progress lines for regression.ps1 (16 steps). Read-only.
+$total = 16; $last = ''
 while ($true) {
     $s = if (Test-Path C:\dev\Sarus\tests\regression-summary.txt) { Get-Content C:\dev\Sarus\tests\regression-summary.txt } else { @() }
     $verify = ($s | Select-String '^STEP verify \| FLIGHT').Count     # 3 flights

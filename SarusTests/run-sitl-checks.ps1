@@ -4,7 +4,7 @@ param(
     [Parameter(Mandatory)][string]$Name,
     [string]$Bin = "C:\dev\Sarus\SarusOperationPlanner\bin\Release\net461",
     [string]$AppExe = "MissionPlanner.exe",
-    [ValidateSet("quadplane","copter")][string]$Vehicle = "quadplane",
+    [ValidateSet("quadplane","copter","rover")][string]$Vehicle = "quadplane",
     [switch]$BadLink
 )
 $ErrorActionPreference = 'Stop'
@@ -14,12 +14,13 @@ $run = "$root\sitl\run"
 $report = "$root\tests\report-$Name.txt"
 
 # 1. Fresh simulator (wiped eeprom) so every run starts from identical vehicle state.
-Get-Process ArduPlane, ArduCopter -ErrorAction SilentlyContinue | Stop-Process -Force
+Get-Process ArduPlane, ArduCopter, ArduRover -ErrorAction SilentlyContinue | Stop-Process -Force
 Start-Sleep 1
 New-Item -ItemType Directory -Force $run | Out-Null
 Get-ChildItem $run -Force | Remove-Item -Recurse -Force
 $env:SARUS_VEHICLE = $Vehicle
 if ($Vehicle -eq 'copter') { $simDir = 'CopterStable'; $exe = 'ArduCopter.exe'; $model = '-M+'; $parm = 'copter.parm' }
+elseif ($Vehicle -eq 'rover') { $simDir = 'RoverStable'; $exe = 'ArduRover.exe'; $model = '-Mrover'; $parm = 'rover.parm' }
 else { $simDir = 'PlaneStable'; $exe = 'ArduPlane.exe'; $model = '-Mquadplane'; $parm = 'quadplane.parm' }
 Copy-Item "$root\sitl\$simDir\*" $run
 Copy-Item "$root\sitl\$parm" $run

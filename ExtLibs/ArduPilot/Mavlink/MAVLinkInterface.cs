@@ -5931,9 +5931,6 @@ Sarus Operation Planner waits for 2 valid heartbeat packets before connecting
         public async Task<Dictionary<ushort, mavlink_log_entry_t>> GetLogEntry(ushort startno = 0,
             ushort endno = ushort.MaxValue)
         {
-            giveComport = true;
-            MAVLinkMessage buffer;
-
             Dictionary<ushort, mavlink_log_entry_t> ans = new Dictionary<ushort, mavlink_log_entry_t>();
 
             mavlink_log_request_list_t req = new mavlink_log_request_list_t();
@@ -5945,70 +5942,80 @@ Sarus Operation Planner waits for 2 valid heartbeat packets before connecting
 
             log.Info("GetLogEntry " + startno + "-" + endno);
 
-            // request point
-            generatePacket((byte) MAVLINK_MSG_ID.LOG_REQUEST_LIST, req);
-
-            DateTime start = DateTime.Now;
-            int retrys = 4;
-
-            while (true)
+            // Sarus: LOG_ENTRY/LOG_DATA arrive through packet subscriptions, so another request reading the link
+            // cannot consume them (the previous read loop discarded every packet that was not its own).
+            var received = new System.Collections.Concurrent.ConcurrentQueue<MAVLinkMessage>();
+            var subs = new List<int>
             {
-                if (!(start.AddMilliseconds(5000) > DateTime.Now))
+                SubscribeToPacketType(MAVLINK_MSG_ID.LOG_ENTRY, m => { received.Enqueue(m); return true; },
+                    MAV.sysid, req.target_component),
+                SubscribeToPacketType(MAVLINK_MSG_ID.LOG_DATA, m => { received.Enqueue(m); return true; },
+                    MAV.sysid, req.target_component)
+            };
+
+            giveComport = true;
+            try
+            {
+                // request point
+                generatePacket((byte) MAVLINK_MSG_ID.LOG_REQUEST_LIST, req);
+
+                DateTime start = DateTime.Now;
+                int retrys = 4;
+
+                while (true)
                 {
-                    if (retrys > 0)
+                    while (received.TryDequeue(out var buffer))
                     {
-                        req.start = startno;
-                        req.end = endno;
-                        log.Info("GetLogEntry Retry " + retrys + " - giv com " + giveComport);
-                        generatePacket((byte) MAVLINK_MSG_ID.LOG_REQUEST_LIST, req);
-                        start = DateTime.Now;
-                        retrys--;
-                        continue;
-                    }
-
-                    giveComport = false;
-                    throw new TimeoutException("Timeout on read - GetLogEntry");
-                }
-
-                buffer = await readPacketAsync().ConfigureAwait(false);
-                if (buffer.Length > 5)
-                {
-                    if (buffer.msgid == (byte) MAVLINK_MSG_ID.LOG_ENTRY && buffer.sysid == MAV.sysid &&
-                        buffer.compid == req.target_component)
-                    {
-                        var loge = buffer.ToStructure<mavlink_log_entry_t>();
-
-                        if (loge.id >= startno && loge.id <= endno)
+                        if (buffer.msgid == (byte) MAVLINK_MSG_ID.LOG_ENTRY)
                         {
-                            if (loge.num_logs == 0 && loge.last_log_num == 0)
-                            {
-                                giveComport = false;
-                                return ans;
-                            }
+                            var loge = buffer.ToStructure<mavlink_log_entry_t>();
 
-                            // reset timeout
-                            start = DateTime.Now;
-                            // add the log to our answer
-                            ans[loge.id] = loge;
-                            // set the startno to our new min
-                            startno = (ushort) Math.Min(ans.Keys.Min() + 1, loge.id);
-                            // set the end number to logmax
-                            endno = loge.last_log_num;
-                            if (ans.Count >= loge.num_logs)
+                            if (loge.id >= startno && loge.id <= endno)
                             {
-                                giveComport = false;
-                                return ans;
+                                if (loge.num_logs == 0 && loge.last_log_num == 0)
+                                    return ans;
+
+                                // reset timeout
+                                start = DateTime.Now;
+                                // add the log to our answer
+                                ans[loge.id] = loge;
+                                // set the startno to our new min
+                                startno = (ushort) Math.Min(ans.Keys.Min() + 1, loge.id);
+                                // set the end number to logmax
+                                endno = loge.last_log_num;
+                                if (ans.Count >= loge.num_logs)
+                                    return ans;
                             }
                         }
+
+                        if (buffer.msgid == (byte) MAVLINK_MSG_ID.LOG_DATA)
+                            throw new Exception("Existing log download already in progress.");
                     }
 
-                    if (buffer.msgid == (byte) MAVLINK_MSG_ID.LOG_DATA && buffer.sysid == MAV.sysid &&
-                        buffer.compid == req.target_component)
+                    if (!(start.AddMilliseconds(5000) > DateTime.Now))
                     {
-                        giveComport = false;
-                        throw new Exception("Existing log download already in progress.");
+                        if (retrys > 0)
+                        {
+                            req.start = startno;
+                            req.end = endno;
+                            log.Info("GetLogEntry Retry " + retrys + " - giv com " + giveComport);
+                            generatePacket((byte) MAVLINK_MSG_ID.LOG_REQUEST_LIST, req);
+                            start = DateTime.Now;
+                            retrys--;
+                            continue;
+                        }
+
+                        throw new TimeoutException("Timeout on read - GetLogEntry");
                     }
+
+                    await readPacketAsync().ConfigureAwait(false);
                 }
+            }
+            finally
+            {
+                giveComport = false;
+                foreach (var sub in subs)
+                    UnSubscribeToPacketType(sub);
             }
         }
 
@@ -6078,7 +6085,8 @@ Sarus Operation Planner waits for 2 valid heartbeat packets before connecting
                     if (retrys > 0)
                     {
                         log.Info("getRallyPoint Retry " + retrys + " - giv com " + giveComport);
-                        generatePacket((byte) MAVLINK_MSG_ID.FENCE_FETCH_POINT, req);
+                        // Sarus: was FENCE_FETCH_POINT, so a lost rally point request was never really retried
+                        generatePacket((byte) MAVLINK_MSG_ID.RALLY_FETCH_POINT, req);
                         start = DateTime.Now;
                         retrys--;
                         continue;
@@ -6102,7 +6110,7 @@ Sarus Operation Planner waits for 2 valid heartbeat packets before connecting
 
                         if (req.idx != fp.idx)
                         {
-                            generatePacket((byte) MAVLINK_MSG_ID.FENCE_FETCH_POINT, req);
+                            generatePacket((byte) MAVLINK_MSG_ID.RALLY_FETCH_POINT, req);
                             continue;
                         }
 
