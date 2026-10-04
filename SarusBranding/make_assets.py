@@ -75,7 +75,6 @@ x_text = 300
 splash.paste(mark, (x_text - mark.width - 16, 52), mark)
 d.text((x_text, 40), "SARUS", font=f_bold, fill=hex_rgb(TEXT))
 d.text((x_text + 2, 92), "Operation Planner", font=f_reg, fill=hex_rgb(MUTED))
-d.rectangle([x_text + 2, 89, x_text + 60, 91], fill=hex_rgb(CRIMSON))
 splash.save(OUT / "splashdark.jpg", quality=95)
 
 for f in sorted(OUT.iterdir()):
@@ -108,7 +107,6 @@ x0 = int((MW - (crane.width + gap + text_w)) / 2)
 menu.alpha_composite(crane, (x0, (MH - crane.height) // 2))
 tx = x0 + crane.width + gap
 dm.text((tx, -3), "SARUS", font=f_menu, fill=(255, 255, 255, 255))
-dm.rectangle([tx + 2, 46, tx + 56, 48], fill=hex_rgb(CRIMSON) + (255,))
 menu = menu.crop((0, 0, MW, MH))
 menu.save(OUT / "menu-logo.png")
 # previews on dark and light bars, at on-screen size
