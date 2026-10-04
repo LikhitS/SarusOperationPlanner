@@ -49,3 +49,5 @@ obj3/
 
 /.claude/settings.local.json
 /CLAUDE.md
+# Sarus: documents shipped with the program (upstream ignores every docs/ folder)
+!Sarus/docs/
