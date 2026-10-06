@@ -352,7 +352,8 @@ namespace wix
                         // Sarus: allow the program on every network type, so Windows never asks (removed on uninstall). The name must
                         // differ from "Sarus Operation Planner", which Windows gives the rules it creates from its own prompts:
                         // WiX updates an existing rule of the same name instead of adding this one.
-                        + "<fire:FirewallException Id=\"fw_SarusOperationPlanner\" Name=\"Sarus Operation Planner (all networks)\" Scope=\"any\" Profile=\"all\" IgnoreFailure=\"yes\" /> </File>");
+                        + "<fire:FirewallException Id=\"fw_SarusOperationPlanner\" Name=\"Sarus Operation Planner (private networks)\" Scope=\"any\" Profile=\"private\" IgnoreFailure=\"yes\" />"
+                        + "<fire:FirewallException Id=\"fw_SarusOperationPlannerDomain\" Name=\"Sarus Operation Planner (domain networks)\" Scope=\"any\" Profile=\"domain\" IgnoreFailure=\"yes\" /> </File>");
 
                     sw.WriteLine(@"<ProgId Id='SarusOperationPlanner.tlog' Description='Telemetry Log'>
   <Extension Id='tlog' ContentType='application/tlog'>

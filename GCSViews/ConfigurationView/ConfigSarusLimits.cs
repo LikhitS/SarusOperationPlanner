@@ -236,6 +236,9 @@ namespace MissionPlanner.GCSViews.ConfigurationView
         {
             if (key == null)
                 return;
+            // the limits and the alarm switch are owner settings, like parameters
+            if (!MissionPlanner.ArduPilot.SarusLock.AllowChange("airframe limits"))
+                return;
             var bad = new List<string>();
             foreach (var f in fields.Where(f => f.Box != null))
             {

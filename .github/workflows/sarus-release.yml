@@ -153,10 +153,13 @@ jobs:
           # Altitude Angel is not shipped
           $aa = Get-ChildItem "${env:ProgramFiles(x86)}\Sarus Operation Planner" -Recurse -Filter "AltitudeAngel*" -ErrorAction SilentlyContinue
           if ($aa) { $aa.FullName; throw "Altitude Angel files were installed" }
-          # the installer allows the program on every network type, so Windows never shows the firewall prompt
+          # the installer allows the program on private and domain networks only; public Wi-Fi stays closed
           $fw = Get-NetFirewallApplicationFilter | Where-Object Program -eq $exe | Get-NetFirewallRule
           $fw | Format-Table DisplayName, Direction, Action, Profile, Enabled -AutoSize | Out-String | Write-Host
-          if (-not ($fw | Where-Object { $_.DisplayName -eq 'Sarus Operation Planner (all networks)' -and $_.Action -eq 'Allow' -and $_.Direction -eq 'Inbound' -and $_.Enabled -eq 'True' -and $_.Profile -eq 'Any' })) { throw "firewall rule for all networks missing" }
+          foreach ($p in 'Private', 'Domain') {
+            if (-not ($fw | Where-Object { $_.DisplayName -eq "Sarus Operation Planner ($($p.ToLower()) networks)" -and $_.Action -eq 'Allow' -and $_.Direction -eq 'Inbound' -and $_.Enabled -eq 'True' -and $_.Profile -eq $p })) { throw "firewall rule for $p networks missing" }
+          }
+          if ($fw | Where-Object { $_.DisplayName -like 'Sarus Operation Planner (*' -and ($_.Profile -eq 'Any' -or $_.Profile -like '*Public*') }) { throw "installer opened the program on public networks" }
           if (-not ($fw | Where-Object { $_.DisplayName -eq 'Sarus Operation Planner' -and $_.Profile -eq 'Public' })) { throw "the user's own rule was changed" }
 
       - name: Start Sarus and keep it running
@@ -181,7 +184,7 @@ jobs:
           $p = Start-Process msiexec -ArgumentList '/x',$code,'/qn','/norestart' -Wait -PassThru
           $exe = "${env:ProgramFiles(x86)}\Sarus Operation Planner\MissionPlanner.exe"
           $left = Get-NetFirewallApplicationFilter | Where-Object Program -eq $exe | Get-NetFirewallRule
-          if ($left | Where-Object DisplayName -eq 'Sarus Operation Planner (all networks)') { throw "installer's firewall rule left behind after uninstall" }
+          if ($left | Where-Object DisplayName -like 'Sarus Operation Planner (*networks)') { throw "installer's firewall rule left behind after uninstall" }
           if (-not ($left | Where-Object DisplayName -eq 'Sarus Operation Planner')) { throw "uninstall removed the user's own firewall rule" }
           "Sarus uninstall exit $($p.ExitCode)"
           if (Test-Path "${env:ProgramFiles(x86)}\Sarus Operation Planner\MissionPlanner.exe") { throw "Sarus files left behind" }
