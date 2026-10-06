@@ -92,6 +92,8 @@
       <tr><td class="k">Reliability</td><td>Replies from the aircraft can no longer be lost when two requests wait at the same time (parameters, commands, missions).</td></tr>
       <tr><td class="k">Coexistence</td><td>Installs beside Mission Planner with separate settings, logs, maps and updates.</td></tr>
       <tr><td class="k">Privacy</td><td>Anonymous usage statistics are off by default.</td></tr>
+      <tr><td class="k">Airspace</td><td>No Altitude Angel or other airspace service is included, so the program never restricts where you fly. The aircraft's own geofence and failsafes still apply, under your control.</td></tr>
+      <tr><td class="k">Network safety</td><td>The built-in web server accepts flight commands only from this PC; other devices on the network can still view telemetry.</td></tr>
     </tbody>
   </table>
 </section>
@@ -162,8 +164,7 @@
   <table>
     <thead><tr><th>Message</th><th>What to do</th></tr></thead>
     <tbody>
-      <tr><td class="k">Windows Security: allow network access</td><td>Tick <span class="ui">Private networks</span> and click <span class="ui">Allow</span>. This is needed for UDP/TCP telemetry (Wi-Fi radios, SITL, companion computers). USB and serial radios work without it.</td></tr>
-      <tr><td class="k">Altitude Angel plugin</td><td>Altitude Angel provides UK airspace data. Answer <span class="ui">No</span> unless you need it. You can change this later in the Plugins window (<kbd>Ctrl</kbd>+<kbd>P</kbd>).</td></tr>
+      <tr><td class="k">Windows Security: allow network access</td><td>Not shown after a normal installation: the installer already allows the program on every network type, and removes that permission when you uninstall. If you run the portable copy, Windows asks once; tick both boxes and click <span class="ui">Allow</span>.</td></tr>
       <tr><td class="k">Restart to enable a plugin (for example Drone ID)</td><td>Restart the program if you want the plugin, or disable it in <kbd>Ctrl</kbd>+<kbd>P</kbd> if you do not.</td></tr>
       <tr><td class="k">Other "show again?" messages</td><td>Informational. Tick "don't show again" if you prefer.</td></tr>
     </tbody>
@@ -566,7 +567,7 @@
       <tr><td class="k">ArduPilot servers</td><td>Firmware lists and downloads, parameter descriptions, SITL binaries</td></tr>
       <tr><td class="k">GitHub (Sarus releases)</td><td>Update checks and update downloads</td></tr>
       <tr><td class="k">Map providers</td><td>Map tiles and elevation data for the area you view (same providers as Mission Planner)</td></tr>
-      <tr><td class="k">Optional plugins</td><td>Only if you enable them (for example Altitude Angel airspace data)</td></tr>
+      <tr><td class="k">Optional plugins</td><td>Only if you enable them (for example internet ADS-B traffic)</td></tr>
       <tr><td class="k">Usage statistics</td><td>Off by default. Nothing is sent unless you turn it on.</td></tr>
     </tbody>
   </table>
