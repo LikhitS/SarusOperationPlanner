@@ -1084,6 +1084,12 @@ namespace MissionPlanner.ArduPilot.Mavlink
 
         public bool kCmdCreateDirectory(string file, CancellationTokenSource cancel)
         {
+            // Sarus: writing files to the vehicle needs the admin password (SarusLock)
+            if (!SarusLock.AllowChange("file write"))
+            {
+                log.Warn("MAVFtp write refused: setup is locked");
+                return false;
+            }
             fileTransferProtocol.target_system = (byte)(_sysid);
             fileTransferProtocol.target_component = _compid;
             fileTransferProtocol.target_network = 0;
@@ -1177,6 +1183,12 @@ namespace MissionPlanner.ArduPilot.Mavlink
 
         public bool kCmdCreateFile(string file, ref int size, CancellationTokenSource cancel)
         {
+            // Sarus: writing files to the vehicle needs the admin password (SarusLock)
+            if (!SarusLock.AllowChange("file write"))
+            {
+                log.Warn("MAVFtp write refused: setup is locked");
+                return false;
+            }
             fileTransferProtocol.target_system = (byte)(_sysid);
             fileTransferProtocol.target_component = _compid;
             fileTransferProtocol.target_network = 0;
@@ -1486,6 +1498,12 @@ namespace MissionPlanner.ArduPilot.Mavlink
 
         public bool kCmdOpenFileWO(string file, ref int size, CancellationTokenSource cancel)
         {
+            // Sarus: writing files to the vehicle needs the admin password (SarusLock)
+            if (!SarusLock.AllowChange("file write"))
+            {
+                log.Warn("MAVFtp write refused: setup is locked");
+                return false;
+            }
             fileTransferProtocol.target_system = (byte)(_sysid);
             fileTransferProtocol.target_component = _compid;
             fileTransferProtocol.target_network = 0;
@@ -1699,6 +1717,12 @@ namespace MissionPlanner.ArduPilot.Mavlink
 
         public bool kCmdRemoveDirectory(string file, CancellationTokenSource cancel)
         {
+            // Sarus: writing files to the vehicle needs the admin password (SarusLock)
+            if (!SarusLock.AllowChange("file write"))
+            {
+                log.Warn("MAVFtp write refused: setup is locked");
+                return false;
+            }
             file = file.Replace("//", "/");
             fileTransferProtocol.target_system = (byte)(_sysid);
             fileTransferProtocol.target_component = _compid;
@@ -1784,6 +1808,12 @@ namespace MissionPlanner.ArduPilot.Mavlink
 
         public bool kCmdRemoveFile(string file, CancellationTokenSource cancel)
         {
+            // Sarus: writing files to the vehicle needs the admin password (SarusLock)
+            if (!SarusLock.AllowChange("file write"))
+            {
+                log.Warn("MAVFtp write refused: setup is locked");
+                return false;
+            }
             file = file.Replace("//", "/");
             fileTransferProtocol.target_system = (byte)(_sysid);
             fileTransferProtocol.target_component = _compid;
@@ -1869,6 +1899,12 @@ namespace MissionPlanner.ArduPilot.Mavlink
 
         public bool kCmdRename(string src, string dest, CancellationTokenSource cancel)
         {
+            // Sarus: writing files to the vehicle needs the admin password (SarusLock)
+            if (!SarusLock.AllowChange("file write"))
+            {
+                log.Warn("MAVFtp write refused: setup is locked");
+                return false;
+            }
             fileTransferProtocol.target_system = (byte)(_sysid);
             fileTransferProtocol.target_component = _compid;
             fileTransferProtocol.target_network = 0;
@@ -2056,6 +2092,12 @@ namespace MissionPlanner.ArduPilot.Mavlink
 
         public bool kCmdTruncateFile(string file, CancellationTokenSource cancel)
         {
+            // Sarus: writing files to the vehicle needs the admin password (SarusLock)
+            if (!SarusLock.AllowChange("file write"))
+            {
+                log.Warn("MAVFtp write refused: setup is locked");
+                return false;
+            }
             fileTransferProtocol.target_system = (byte)(_sysid);
             fileTransferProtocol.target_component = _compid;
             fileTransferProtocol.target_network = 0;
@@ -2133,6 +2175,12 @@ namespace MissionPlanner.ArduPilot.Mavlink
 
         public bool kCmdWriteFile(byte[] data, uint destoffset, string friendlyname, CancellationTokenSource cancel)
         {
+            // Sarus: writing files to the vehicle needs the admin password (SarusLock)
+            if (!SarusLock.AllowChange("file write"))
+            {
+                log.Warn("MAVFtp write refused: setup is locked");
+                return false;
+            }
             RetryTimeout timeout = new RetryTimeout();
             int sub;
             var payload = new FTPPayloadHeader()

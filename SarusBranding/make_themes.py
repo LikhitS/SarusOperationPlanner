@@ -8,6 +8,7 @@ HERE = Path(__file__).parent
 OUT = HERE / "out"
 pal = json.loads((HERE / "palette.json").read_text())
 d, l, s = pal["dark"], pal["light"], pal["status"]
+g = pal["glass"]
 
 HUD = [  # identical to BurntKermit.mpsystheme
     ("HUD text and drawings", "LightGray", None, "HudText"),
@@ -67,6 +68,32 @@ THEMES = {
         ("BackStageView Button Area", "#DDE3E9", None, "BSVButtonAreaBGColor"),
         ("BSV Unselected Text", l["textMuted"], None, "UnselectedTextColour"),
         ("Horizontal ProgressBar", l["accent"], None, "HorizontalPBValueColor"),
+    ]),
+    # opt-in theme; SarusGlass.cs adds the frosted menu bar, the acrylic window frame and the raised buttons
+    "SarusGlass": ("BurnKermitIconSet", [
+        ("Background", g["background"], None, "BGColor"),
+        ("Control Background", g["surface"], None, "ControlBGColor"),
+        ("Text", g["text"], None, "TextColor"),
+        ("TextBox Background", g["surfaceRaised"], None, "BGColorTextBox"),
+        ("Button Text", g["text"], None, "ButtonTextColor"),
+        ("Button Background top", g["button"], None, "ButBG"),
+        ("Button Background bottom", g["button"], None, "ButBGBot"),
+        ("ProgressBar Top", g["accent"], None, "ProgressBarColorTop"),
+        ("ProgressBar Bottom", g["accent"], None, "ProgressBarColorBot"),
+        ("ProgressBar Outline", g["accentHover"], None, "ProgressBarOutlineColor"),
+        ("BannerColor1", g["surfaceRaised"], None, "BannerColor1"),
+        ("BannerColor2", g["accent"], None, "BannerColor2"),
+        ("Disabled Button", g["background"], 140, "ColorNotEnabled"),
+        ("Button Mouseover", "#FFFFFF", 22, "ColorMouseOver"),
+        ("Button Mousedown", "#000000", 60, "ColorMouseDown"),
+        ("CurrentPPM Background", s["ok"], None, "CurrentPPMBackground"),
+        ("Graph Chart Fill", g["background"], None, "ZedGraphChartFill"),
+        ("Graph Pane Fill", g["surface"], None, "ZedGraphPaneFill"),
+        ("Graph Legend Fill", g["border"], None, "ZedGraphLegendFill"),
+        ("Rich Text Box text", g["text"], None, "RTBForeColor"),
+        ("BackStageView Button Area", g["panelEdge"], None, "BSVButtonAreaBGColor"),
+        ("BSV Unselected Text", g["textMuted"], None, "UnselectedTextColour"),
+        ("Horizontal ProgressBar", g["accent"], None, "HorizontalPBValueColor"),
     ]),
 }
 

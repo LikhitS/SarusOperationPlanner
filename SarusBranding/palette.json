@@ -35,5 +35,20 @@
     "warning": "#F0A630",
     "error": "#E5484D",
     "info": "#3A9FE0"
-  }
+  },
+  "glass": {
+    "background": "#16202A",
+    "surface": "#1E2A35",
+    "surfaceRaised": "#26333F",
+    "border": "#3B4A58",
+    "text": "#E8EEF3",
+    "textMuted": "#A3B1BE",
+    "accent": "#4A8FC0",
+    "accentHover": "#6AA7D2",
+    "accentText": "#E8EEF3",
+    "button": "#24313D",
+    "buttonEdge": "#44566A",
+    "panelEdge": "#0F171F"
+  },
+  "notes_glass": "Sarus Glass: slate surfaces a few steps apart so raised and frosted panels read by tone, not colour; one steel blue for progress and focus; brand crimson still kept for the logo only."
 }

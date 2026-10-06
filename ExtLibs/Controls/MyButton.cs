@@ -27,6 +27,12 @@ namespace MissionPlanner.Controls
 
         bool inOnPaint = false;
 
+        /// <summary>
+        /// Sarus Glass theme: buttons are drawn as one soft raised surface (a light top edge, one short shadow,
+        /// small corners) that sinks when pressed. Off for every other theme.
+        /// </summary>
+        public static bool SoftRaised;
+
         [System.ComponentModel.Browsable(true), System.ComponentModel.Category("Colors")]
         [DefaultValue(typeof(Color), "0x94, 0xc1, 0x1f")]
         public Color BGGradTop { get { return _BGGradTop; } set { _BGGradTop = value; this.Invalidate(); } }
@@ -74,6 +80,17 @@ namespace MissionPlanner.Controls
                 return;
 
             inOnPaint = true;
+
+            if (SoftRaised)
+            {
+                try
+                {
+                    PaintSoftRaised(pevent.Graphics);
+                }
+                catch { }
+                inOnPaint = false;
+                return;
+            }
 
             try
             {
@@ -160,6 +177,83 @@ namespace MissionPlanner.Controls
         protected override void OnClick(EventArgs e)
         {
             base.OnClick(e);
+        }
+
+        private static GraphicsPath RoundRect(RectangleF r, float radius)
+        {
+            var p = new GraphicsPath();
+            float d = radius * 2;
+            p.AddArc(r.X, r.Y, d, d, 180, 90);
+            p.AddArc(r.Right - d, r.Y, d, d, 270, 90);
+            p.AddArc(r.Right - d, r.Bottom - d, d, d, 0, 90);
+            p.AddArc(r.X, r.Bottom - d, d, d, 90, 90);
+            p.CloseFigure();
+            return p;
+        }
+
+        private static Color Shade(Color c, float f)
+        {
+            // f > 0 lightens towards white, f < 0 darkens towards black
+            int Mix(int v) => (int) Math.Round(f >= 0 ? v + (255 - v) * f : v * (1 + f));
+            return Color.FromArgb(c.A, Mix(c.R), Mix(c.G), Mix(c.B));
+        }
+
+        private void PaintSoftRaised(Graphics gr)
+        {
+            var back = Parent?.BackColor ?? BackColor;
+            gr.Clear(back.A == 255 ? back : BackColor);
+            gr.SmoothingMode = SmoothingMode.AntiAlias;
+
+            bool pressed = _mousedown && Enabled;
+            const float radius = 4f;
+            var face = new RectangleF(1.5f, 1.5f, Width - 4f, Height - 4.5f);
+            if (pressed)
+                face.Offset(0, 1f);
+
+            using (var facePath = RoundRect(face, radius))
+            {
+                if (!pressed && Enabled)
+                {
+                    // one short, soft shadow below the face
+                    using (var shadowPath = RoundRect(new RectangleF(face.X + 0.5f, face.Y + 2f, face.Width, face.Height), radius))
+                    using (var shadow = new SolidBrush(Color.FromArgb(70, 0, 0, 0)))
+                        gr.FillPath(shadow, shadowPath);
+                }
+
+                var top = pressed ? Shade(BGGradTop, -0.10f) : Shade(BGGradTop, 0.05f);
+                var bottom = pressed ? Shade(BGGradTop, -0.04f) : BGGradTop;
+                using (var fill = new LinearGradientBrush(face, top, bottom, LinearGradientMode.Vertical))
+                    gr.FillPath(fill, facePath);
+
+                if (_mouseover && Enabled && !pressed)
+                    using (var over = new SolidBrush(ColorMouseOver))
+                        gr.FillPath(over, facePath);
+
+                // light top edge when raised, dark top edge when pressed in
+                using (var edge = new Pen(pressed ? Color.FromArgb(90, 0, 0, 0) : Color.FromArgb(55, 255, 255, 255), 1f))
+                    gr.DrawLine(edge, face.X + radius, face.Y + 0.5f, face.Right - radius, face.Y + 0.5f);
+
+                using (var outline = new Pen(Color.FromArgb(150, Outline), 1f))
+                    gr.DrawPath(outline, facePath);
+
+                if (!Enabled)
+                    using (var dim = new SolidBrush(_ColorNotEnabled))
+                        gr.FillPath(dim, facePath);
+
+                // keyboard focus stays visible
+                if (Focused && ShowFocusCues)
+                    using (var focus = new Pen(Color.FromArgb(160, TextColor), 1f) { DashStyle = DashStyle.Dot })
+                    using (var focusPath = RoundRect(RectangleF.Inflate(face, -3, -3), radius - 1))
+                        gr.DrawPath(focus, focusPath);
+
+                var format = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center };
+                string display = Text;
+                int amppos = display.IndexOf('&');
+                if (amppos != -1)
+                    display = display.Remove(amppos, 1);
+                using (var text = new SolidBrush(Enabled ? TextColor : TextColorNotEnabled))
+                    gr.DrawString(display, Font, text, face, format);
+            }
         }
 
         protected override void OnPaintBackground(PaintEventArgs pevent)

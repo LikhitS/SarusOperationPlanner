@@ -131,6 +131,9 @@ namespace MissionPlanner.Utilities
                 }
             }
 
+            // Sarus: the opt-in Sarus Glass theme adds its own menu surface, window frame and button style
+            SarusGlass.Apply(strThemeName);
+
             MainV2.TerminalTheming = terminalTheming;
             Settings.Instance["terminaltheming"] = terminalTheming.ToString();
             //HUD Color setting
@@ -1136,6 +1139,8 @@ mc:Ignorable=""d""
                 {
                     ctl.BackColor = BGColor;
                     ctl.ForeColor = TextColor;
+                    // Sarus Glass draws group boxes as cards; nothing changes in other themes
+                    SarusGlass.StyleGroupBox((GroupBox) ctl);
                 }
                 else if (ctl.GetType() == typeof(MyLabel))
                 {

@@ -743,6 +743,9 @@
     <None Update="SarusLight.mpsystheme">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Update="SarusGlass.mpsystheme">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <!-- Sarus documents shipped with the program (docs folder); the installer adds a Start-menu entry for the manual -->
     <None Update="Sarus\docs\*.pdf">
       <Link>docs\%(Filename)%(Extension)</Link>

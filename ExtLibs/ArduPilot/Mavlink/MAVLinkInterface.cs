@@ -1648,6 +1648,13 @@ Sarus Operation Planner waits for 2 valid heartbeat packets before connecting
                 return true;
             }
 
+            // Sarus: changing a parameter needs the admin password (SarusLock); reading stays open
+            if (!SarusLock.AllowChange("parameter " + paramname))
+            {
+                log.Warn("setParam " + paramname + " refused: parameters are locked");
+                return false;
+            }
+
             giveComport = true;
 
             // param type is set here, however it is always sent over the air as a float 100int = 100f.
@@ -2662,6 +2669,13 @@ Sarus Operation Planner waits for 2 valid heartbeat packets before connecting
             float p4,
             float p5, float p6, float p7, bool requireack = true, Action uicallback = null)
         {
+            // Sarus: calibrations, resets and bootloader commands need the admin password (SarusLock)
+            if (SarusLock.IsSetupCommand(actionid, p1) && !SarusLock.AllowChange("command " + actionid))
+            {
+                log.Warn("doCommand " + actionid + " refused: setup is locked");
+                return false;
+            }
+
             if (BaseStream == null || BaseStream.IsOpen == false)
                 return false;
 
@@ -2810,6 +2824,13 @@ Sarus Operation Planner waits for 2 valid heartbeat packets before connecting
             int p5, int p6, float p7, bool requireack = true, Action uicallback = null,
             MAV_FRAME frame = MAV_FRAME.GLOBAL)
         {
+            // Sarus: calibrations, resets and bootloader commands need the admin password (SarusLock)
+            if (SarusLock.IsSetupCommand(actionid, p1) && !SarusLock.AllowChange("command " + actionid))
+            {
+                log.Warn("doCommandInt " + actionid + " refused: setup is locked");
+                return false;
+            }
+
             return doCommandIntAsync(sysid, compid, actionid, p1, p2, p3, p4, p5, p6, p7, requireack, uicallback, frame)
                 .AwaitSync();
         }
@@ -2819,6 +2840,13 @@ Sarus Operation Planner waits for 2 valid heartbeat packets before connecting
             int p5, int p6, float p7, bool requireack = true, Action uicallback = null,
             MAV_FRAME frame = MAV_FRAME.GLOBAL)
         {
+            // Sarus: calibrations, resets and bootloader commands need the admin password (SarusLock)
+            if (SarusLock.IsSetupCommand(actionid, p1) && !SarusLock.AllowChange("command " + actionid))
+            {
+                log.Warn("doCommandInt " + actionid + " refused: setup is locked");
+                return false;
+            }
+
             if (BaseStream == null || BaseStream.IsOpen == false)
                 return false;
 
@@ -5242,6 +5270,95 @@ Sarus Operation Planner waits for 2 valid heartbeat packets before connecting
             }
 
             return item.GetHashCode();
+        }
+
+        /// <summary>
+        /// Sarus parameter lock: the vehicle's lock flags (SarusLock.FLAG_*), or null when its firmware has no
+        /// Sarus lock (ArduPilot, or Sarus firmware before Sarus-2).
+        /// </summary>
+        public async Task<byte?> SarusLockStatusAsync(uint sysid, byte compid)
+        {
+            var r = await SarusLockRequestAsync(sysid, compid, SarusLock.OP_STATUS, null, null).ConfigureAwait(false);
+            return r?.data[1];
+        }
+
+        /// <summary>
+        /// Sarus parameter lock: unlock a vehicle with the key the app holds while unlocked. Returns the vehicle's
+        /// answer, ACCEPTED when its lock is off, DENIED when the app is locked or the key is not one the vehicle
+        /// knows, TEMPORARILY_REJECTED while armed, or null when the vehicle has no Sarus lock or did not answer.
+        /// </summary>
+        public async Task<MAV_RESULT?> SarusLockUnlockAsync(uint sysid, byte compid)
+        {
+            var nonceReply = await SarusLockRequestAsync(sysid, compid, SarusLock.OP_GET_NONCE, null, null)
+                .ConfigureAwait(false);
+            if (nonceReply == null)
+                return null;
+            if ((nonceReply.Value.data[1] & SarusLock.FLAG_ACTIVE) == 0)
+                return MAV_RESULT.ACCEPTED;
+            if ((nonceReply.Value.data[1] & SarusLock.FLAG_UNLOCKED_BY_YOU) != 0)
+                return MAV_RESULT.ACCEPTED;
+            if (nonceReply.Value.data_length < 3 + SarusLock.NONCE_LEN)
+                return null;
+
+            var nonce = new byte[SarusLock.NONCE_LEN];
+            Array.Copy(nonceReply.Value.data, 3, nonce, 0, nonce.Length);
+            var sig = SarusLock.SignUnlock((byte) sysid, compid, (byte) gcssysid, nonce);
+            if (sig == null)
+                return MAV_RESULT.DENIED;
+
+            var r = await SarusLockRequestAsync(sysid, compid, SarusLock.OP_UNLOCK, nonce, sig).ConfigureAwait(false);
+            return r == null ? (MAV_RESULT?) null : (MAV_RESULT) r.Value.result;
+        }
+
+        /// <summary>Sarus parameter lock: lock a vehicle again. True if it confirmed.</summary>
+        public async Task<bool> SarusLockLockAsync(uint sysid, byte compid)
+        {
+            var r = await SarusLockRequestAsync(sysid, compid, SarusLock.OP_LOCK, null, null).ConfigureAwait(false);
+            return r != null && r.Value.result == (byte) MAV_RESULT.ACCEPTED;
+        }
+
+        private int sarusLockSequence;
+
+        // one SECURE_COMMAND and its reply; no retries, because each GET_NONCE replaces the vehicle's nonce
+        private async Task<mavlink_secure_command_reply_t?> SarusLockRequestAsync(uint sysid, byte compid, uint operation,
+            byte[] data, byte[] sig)
+        {
+            if (BaseStream == null || !BaseStream.IsOpen)
+                return null;
+
+            var seq = (uint) Interlocked.Increment(ref sarusLockSequence);
+            var payload = new byte[220];
+            data?.CopyTo(payload, 0);
+            sig?.CopyTo(payload, data?.Length ?? 0);
+            var req = new mavlink_secure_command_t
+            {
+                target_system = (byte) sysid,
+                target_component = compid,
+                sequence = seq,
+                operation = operation,
+                data_length = (byte) (data?.Length ?? 0),
+                sig_length = (byte) (sig?.Length ?? 0),
+                data = payload
+            };
+
+            try
+            {
+                return await RequestReplyAsync<mavlink_secure_command_reply_t?>(sysid, compid,
+                    new[] { MAVLINK_MSG_ID.SECURE_COMMAND_REPLY },
+                    message =>
+                    {
+                        var reply = message.ToStructure<mavlink_secure_command_reply_t>();
+                        if (reply.sequence != seq || reply.operation != operation)
+                            return (ReplyAction.Ignore, null);
+                        return (ReplyAction.Done, reply);
+                    },
+                    () => generatePacket((int) MAVLINK_MSG_ID.SECURE_COMMAND, req, sysid, compid),
+                    2000, 0, "SarusLock").ConfigureAwait(false);
+            }
+            catch (TimeoutException)
+            {
+                return null;
+            }
         }
 
         /// <summary>

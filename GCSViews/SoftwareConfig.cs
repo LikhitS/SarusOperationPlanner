@@ -227,6 +227,9 @@ namespace MissionPlanner.GCSViews
                 {
                     if(!MainV2.comPort.BaseStream.IsOpen || gotAllParams)
                         AddBackstageViewPage(typeof(ConfigRawParams), Strings.FullParameterList, null, false);
+                    // Sarus: what the airframe can physically do; parameters beyond it blink red
+                    if (MainV2.comPort.BaseStream.IsOpen && gotAllParams)
+                        AddBackstageViewPage(typeof(ConfigSarusLimits), "Airframe Limits", null, false);
                 }
                 if (MainV2.comPort.BaseStream.IsOpen)
                 {

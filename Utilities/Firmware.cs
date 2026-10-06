@@ -360,6 +360,12 @@ namespace MissionPlanner.Utilities
         /// <param name="relType"></param>
         public bool updateLegacy(string comport, software temp, string historyhash, List<DeviceInfo> ports)
         {
+            // Sarus: installing firmware needs the admin password (SarusLock)
+            if (!SarusLock.AllowChange("firmware install"))
+            {
+                log.Warn("firmware install refused: setup is locked");
+                return false;
+            }
             BoardDetect.boards board = BoardDetect.boards.none;
             string baseurl = "";
 
@@ -590,6 +596,12 @@ namespace MissionPlanner.Utilities
         /// <param name="filename"></param>
         public bool UploadPX4(string filename, BoardDetect.boards board)
         {
+            // Sarus: installing firmware needs the admin password (SarusLock)
+            if (!SarusLock.AllowChange("firmware install"))
+            {
+                log.Warn("firmware install refused: setup is locked");
+                return false;
+            }
             updateProgress(-1, "Reading Hex File");
             px4uploader.Firmware fw;
             try
@@ -841,6 +853,12 @@ namespace MissionPlanner.Utilities
         /// <param name="filename"></param>
         public bool UploadVRBRAIN(string filename, BoardDetect.boards board)
         {
+            // Sarus: installing firmware needs the admin password (SarusLock)
+            if (!SarusLock.AllowChange("firmware install"))
+            {
+                log.Warn("firmware install refused: setup is locked");
+                return false;
+            }
             px4uploader.Uploader up;
             updateProgress(0, "Reading Hex File");
             px4uploader.Firmware fw;
@@ -988,6 +1006,12 @@ namespace MissionPlanner.Utilities
         /// <param name="filename"></param>
         public bool UploadParrot(string filename, BoardDetect.boards board)
         {
+            // Sarus: installing firmware needs the admin password (SarusLock)
+            if (!SarusLock.AllowChange("firmware install"))
+            {
+                log.Warn("firmware install refused: setup is locked");
+                return false;
+            }
             string vehicleName = board.ToString().Substring(0, 1).ToUpper() + board.ToString().Substring(1).ToLower();
             Ping ping = new Ping();
             PingReply pingReply = pingParrotVehicle(ping);
@@ -1293,6 +1317,12 @@ namespace MissionPlanner.Utilities
         /// <returns>pass/fail</returns>
         public bool UploadFlash(string comport, string filename, BoardDetect.boards board)
         {
+            // Sarus: installing firmware needs the admin password (SarusLock)
+            if (!SarusLock.AllowChange("firmware install"))
+            {
+                log.Warn("firmware install refused: setup is locked");
+                return false;
+            }
             if (board == BoardDetect.boards.px4 || board == BoardDetect.boards.px4v2 ||
                 board == BoardDetect.boards.px4v3 || board == BoardDetect.boards.px4v4 ||
                 board == BoardDetect.boards.px4v4pro || board == BoardDetect.boards.fmuv5 ||
@@ -1350,6 +1380,12 @@ namespace MissionPlanner.Utilities
 
         public bool UploadArduino(string comport, string filename, BoardDetect.boards board)
         {
+            // Sarus: installing firmware needs the admin password (SarusLock)
+            if (!SarusLock.AllowChange("firmware install"))
+            {
+                log.Warn("firmware install refused: setup is locked");
+                return false;
+            }
             byte[] FLASH = new byte[1];
             try
             {

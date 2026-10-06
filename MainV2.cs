@@ -209,6 +209,12 @@ namespace MissionPlanner
             }
         }
 
+        /// <summary>Sarus Glass: the Sarus menu icons on the frosted menu surface</summary>
+        public class sarusglassmenuicons : burntkermitmenuicons
+        {
+            public override Image bg => SarusGlass.MenuBackground();
+        }
+
         public class highcontrastmenuicons : menuicons
         {
             private string running_directory = Settings.GetRunningDirectory();
@@ -634,6 +640,9 @@ namespace MissionPlanner
         {
             log.Info("Mainv2 ctor");
 
+            // Sarus: password prompt and aircraft unlocking for the parameter lock
+            SarusLockUI.Init();
+
             SetStyle(ControlStyles.OptimizedDoubleBuffer, true);
 
             // create one here - but override on load
@@ -702,6 +711,12 @@ namespace MissionPlanner
             }
 
             InitializeComponent();
+
+            // Sarus: blinking red banner when parameters ask for more than the airframe can do
+            SarusLimitsUI.Attach(this);
+
+            // Sarus: siren and continue / hold / return when a mission is not going as set
+            SarusFlightAlarm.Attach(this);
 
             //Init Theme table and load BurntKermit as a default
             ThemeManager.thmColor = new ThemeColorTable(); //Init colortable
@@ -1735,6 +1750,9 @@ namespace MissionPlanner
                     _connectionControl.UpdateSysIDS();
 
                     FlightData.CheckBatteryShow();
+
+                    // Sarus: an unlocked app unlocks each aircraft it connects to
+                    SarusLockUI.AfterConnect(comPort);
 
                     // save the baudrate for this port
                     Settings.Instance[_connectionControl.CMB_serialport.Text.Replace(" ","_") + "_BAUD"] =

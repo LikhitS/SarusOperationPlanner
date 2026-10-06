@@ -232,10 +232,8 @@ namespace MissionPlanner.GCSViews
                 AddBackstageViewPage(typeof(ConfigFailSafe), rm.GetString("backstageViewPagefs.Text"), isConnected && gotAllParams, mand);
             }
 
-            if ((isCopter || isQuadPlane) && MainV2.DisplayConfiguration.displayInitialParams)
-            {
-                AddBackstageViewPage(typeof(ConfigInitialParams), rm.GetString("backstageViewPageInitialParams.Text"), isConnected && gotAllParams, mand);
-            }
+            // Sarus: Initial Tune Parameters (ConfigInitialParams) writes values the app suggests, so it is not
+            // offered; the aircraft takes only the values the user sets
 
             if (MainV2.DisplayConfiguration.displayHWIDs)
                 AddBackstageViewPage(typeof(ConfigHWIDs), "HW ID", isConnected && gotAllParams, mand);

@@ -45,6 +45,85 @@ namespace MissionPlanner.GCSViews.ConfigurationView
         public ConfigRawParams()
         {
             InitializeComponent();
+
+            // Sarus: lock state and lock/unlock, in a new row under the existing buttons
+            tableLayoutPanel1.RowCount++;
+            tableLayoutPanel1.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            tableLayoutPanel1.Controls.Add(SarusLockUI.MakeButton(), 0, tableLayoutPanel1.RowCount - 1);
+
+            // Sarus: no presaved parameter files; the aircraft takes only the values the user sets
+            CMB_paramfiles.Visible = false;
+            BUT_paramfileload.Visible = false;
+
+            // Sarus: values beyond the airframe limits blink red
+            Action<bool> blink = SarusBlinkCells;
+            SarusLimitsUI.Blink += blink;
+            Disposed += (s, e) => SarusLimitsUI.Blink -= blink;
+        }
+
+        // Sarus airframe limits: parameter name -> why its value is beyond the limits
+        private readonly Dictionary<string, string> sarusLimitCells = new Dictionary<string, string>();
+        private readonly HashSet<DataGridViewCell> sarusMarked = new HashSet<DataGridViewCell>();
+
+        private void SarusMarkFromAircraft()
+        {
+            sarusLimitCells.Clear();
+            try
+            {
+                if (!MainV2.comPort.BaseStream.IsOpen)
+                    return;
+                var env = SarusLimitsUI.EnvelopeForCurrent();
+                if (!env.AnyLimitEntered)
+                    return;
+                var kind = SarusLimitsUI.KindForCurrent();
+                foreach (var v in env.CheckAll(kind, MainV2.comPort.MAV.param.ToArray()
+                             .Select(p => new KeyValuePair<string, double>(p.Name, p.Value))))
+                    sarusLimitCells[v.Param] = v.Message;
+            }
+            catch (Exception ex)
+            {
+                log.Error(ex);
+            }
+        }
+
+        private void SarusCheckTyped(string name, double value)
+        {
+            var v = SarusLimitsUI.CheckValue(name, value);
+            if (v.Count > 0)
+                sarusLimitCells[name] = v[0].Message;
+            else
+                sarusLimitCells.Remove(name);
+            SarusBlinkCells(true);
+        }
+
+        private void SarusBlinkCells(bool on)
+        {
+            if (IsDisposed || !Params.Visible)
+                return;
+            var now = new HashSet<DataGridViewCell>();
+            if (sarusLimitCells.Count > 0)
+            {
+                foreach (DataGridViewRow row in Params.Rows)
+                {
+                    var name = row.Cells[Command.Index].Value?.ToString();
+                    if (name == null || !sarusLimitCells.TryGetValue(name, out var why))
+                        continue;
+                    var cell = row.Cells[Value.Index];
+                    cell.Style.BackColor = on ? SarusLimitsUI.AlertRed : SarusLimitsUI.AlertRedDim;
+                    cell.Style.ForeColor = Color.White;
+                    cell.ToolTipText = "Beyond the airframe limits: " + why;
+                    now.Add(cell);
+                }
+            }
+            foreach (var cell in sarusMarked.Where(c => !now.Contains(c)).ToList())
+            {
+                cell.Style.BackColor = Color.Empty;
+                cell.Style.ForeColor = Color.Empty;
+                if ((cell.ToolTipText ?? "").StartsWith("Beyond the airframe limits"))
+                    cell.ToolTipText = "";
+            }
+            sarusMarked.Clear();
+            sarusMarked.UnionWith(now);
         }
 
         public void Activate()
@@ -573,27 +652,14 @@ namespace MissionPlanner.GCSViews.ConfigurationView
                     }
                 }
 
-                // Sarus: out-of-range values are accepted without a prompt and flagged on the cell instead
-                string rangeWarning = null;
-                if (ParameterMetaDataRepository.GetParameterRange(Params[Command.Index, e.RowIndex].Value.ToString(),
-                    ref min, ref max, MainV2.comPort.MAV.cs.firmware.ToString()))
-                {
-                    if (newvalue > max || newvalue < min)
-                        rangeWarning = "Outside ArduPilot's recommended range " + min + " to " + max +
-                                       ". It will be written as entered; the aircraft may limit it.";
-                }
-
-                if (rangeWarning != null)
-                {
-                    SetCellWarning(Params[e.ColumnIndex, e.RowIndex], rangeWarning);
-                }
-                else
-                {
-                    ClearCellWarning(Params[e.ColumnIndex, e.RowIndex]);
-                    Params[e.ColumnIndex, e.RowIndex].Style.BackColor = Color.Green;
-                }
+                // Sarus: values are taken as entered. ArduPilot's recommended range is a suggestion, so it is
+                // neither enforced nor flagged here.
+                ClearCellWarning(Params[e.ColumnIndex, e.RowIndex]);
+                Params[e.ColumnIndex, e.RowIndex].Style.BackColor = Color.Green;
                 log.InfoFormat("Queue change {0} = {1} ({2})", Params[Command.Index, e.RowIndex].Value, Params[e.ColumnIndex, e.RowIndex].Value, newvalue);
                 _changes[Params[Command.Index, e.RowIndex].Value] = newvalue;
+                // Sarus: a value beyond the airframe limits blinks red as soon as it is typed
+                SarusCheckTyped(Params[Command.Index, e.RowIndex].Value.ToString(), newvalue);
 
                 Params.CellValueChanged -= Params_CellValueChanged;
                 Params[e.ColumnIndex, e.RowIndex].Value = newvalue.ToString();
@@ -694,7 +760,8 @@ namespace MissionPlanner.GCSViews.ConfigurationView
                                 ParameterMetaDataConstants.Units, MainV2.comPort.MAV.cs.firmware.ToString());
 
                             row.Cells[Units.Index].Value = units;
-                            row.Cells[Options.Index].Value = (range + "\n" + options.Replace(",", "\n")).Trim();
+                            // Sarus: ArduPilot's recommended range is a suggestion and is not shown; named options stay
+                            row.Cells[Options.Index].Value = options.Replace(",", "\n").Trim();
                             if (options.Length > 0) row.Cells[Options.Index].ToolTipText = options.Replace(',', '\n');
                             int N = options.Count(c => c.Equals(','));
                             if (N > 50)
@@ -752,6 +819,11 @@ namespace MissionPlanner.GCSViews.ConfigurationView
             Params.Sort(Params.Columns[Command.Index], ListSortDirection.Ascending);
 
             Params.Visible = true;
+
+            // Sarus: mark values already beyond the airframe limits
+            sarusMarked.Clear();
+            SarusMarkFromAircraft();
+            SarusBlinkCells(true);
 
             if (splitContainer1.Panel1Collapsed == false)
             {
@@ -1363,12 +1435,12 @@ namespace MissionPlanner.GCSViews.ConfigurationView
                         decimalPlaces = (int)Math.Round(Math.Max(0, -Math.Log10(Math.Abs(min))));
                     }
                     num.DecimalPlaces = decimalPlaces;
-                    num.Minimum = Math.Round((decimal)min, num.DecimalPlaces);
-                    num.Maximum = Math.Round((decimal)max, num.DecimalPlaces);
+                    // Sarus: wide bounds, so the spin box never pulls a value back into the recommended range
+                    num.Minimum = -1000000000m;
+                    num.Maximum = 1000000000m;
                     num.Increment = Math.Round((decimal)inc, num.DecimalPlaces);
 
-                    // Parse the cell. Clamp the value to the bounds.
-                    decimal val = num.Minimum;
+                    decimal val = 0;
                     decimal.TryParse(Params[Value.Index, e.RowIndex].Value?.ToString(), out val);
                     val = Math.Min(val, num.Maximum);
                     val = Math.Max(val, num.Minimum);
