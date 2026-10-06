@@ -87,7 +87,7 @@ footer { margin-top: 48px; padding-top: 14px; border-top: 1px solid var(--line);
           </tbody>
         </table>
       </div>
-      <p>Both lines carry the parameter lock and room for the owner's parameter set as firmware defaults, so a new board, a parameter reset or a firmware install starts from the owner's values. Install Firmware lists both lines and asks which one to load.</p>
+      <p>On the 4.6 line, CubeOrangePlus gets Plane and Rover only, because 4.6.3 Copter no longer fits its flash; use the 4.7 line for Copter on that board. Both lines carry the parameter lock and room for the owner's parameter set as firmware defaults, so a new board, a parameter reset or a firmware install starts from the owner's values. Install Firmware lists both lines and asks which one to load.</p>
 
       <h2>How 1.1.0 was tested</h2>
       <p>The full regression ran against Sarus-2 on 4.7.1 in the simulator and passed all 16 steps: the parameter editor, QuadPlane, Copter and Rover missions, the limits and alarm flight, a flight over a poor link, every keyboard shortcut with a concurrency stress test, every SETUP and CONFIG page, and a write, read-back and restore of every QuadPlane and Rover parameter. On 4.6.3 the lock, alarm, Copter and Rover runs passed as well.</p>
