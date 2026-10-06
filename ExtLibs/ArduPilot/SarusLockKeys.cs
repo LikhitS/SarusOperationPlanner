@@ -7,6 +7,8 @@ namespace MissionPlanner.ArduPilot
     {
         internal static readonly SarusLock.Key[] Owner =
         {
+            new SarusLock.Key("owner-1", "5f10519fb13e226a671b795045b6846e", "77e361999fc0f2fdb7a8625e9af5436d81668d24973c6fc4e35c4ab8b90a97c8"),
+            new SarusLock.Key("owner-2", "90f4edf967584c071b9d2046e1dab005", "bbf08de3e1442b44dc24d85f232a0f1adca9e9515cb4a3b40231b42659c7cfc1"),
         };
     }
 }

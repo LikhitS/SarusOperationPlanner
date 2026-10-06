@@ -98,15 +98,19 @@ view.save(HERE / "splash-preview.png")
 MW, MH = 383, 60
 menu = Image.new("RGBA", (MW, MH), (0, 0, 0, 0))
 ImageDraw.Draw(menu).rounded_rectangle([0, 0, MW - 1, MH - 1], radius=12, fill=hex_rgb(INK) + (255,))
-crane = logo(92, "#FFFFFF")
-f_menu = ImageFont.truetype(r"C:\Windows\Fonts\segoeuib.ttf", 42)
+# "Powered by" over "SARUS AEROSPACE", next to the logo; two lines so both stay readable at menu size
+crane = logo(78, "#FFFFFF")
+f_small = ImageFont.truetype(r"C:\Windows\Fonts\segoeui.ttf", 17)
+f_name = ImageFont.truetype(r"C:\Windows\Fonts\segoeuib.ttf", 25)
 dm = ImageDraw.Draw(menu)
-text_w = dm.textlength("SARUS", font=f_menu)
-gap = 18
-x0 = int((MW - (crane.width + gap + text_w)) / 2)
+name = "SARUS AEROSPACE"
+name_w = dm.textlength(name, font=f_name)
+gap = 14
+x0 = int((MW - (crane.width + gap + name_w)) / 2)
 menu.alpha_composite(crane, (x0, (MH - crane.height) // 2))
 tx = x0 + crane.width + gap
-dm.text((tx, -3), "SARUS", font=f_menu, fill=(255, 255, 255, 255))
+dm.text((tx + 1, 5), "Powered by", font=f_small, fill=hex_rgb(MUTED) + (255,))
+dm.text((tx, 24), name, font=f_name, fill=(255, 255, 255, 255))
 menu = menu.crop((0, 0, MW, MH))
 menu.save(OUT / "menu-logo.png")
 # previews on dark and light bars, at on-screen size
