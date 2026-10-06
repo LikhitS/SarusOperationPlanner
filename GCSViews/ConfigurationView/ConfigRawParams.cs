@@ -403,7 +403,13 @@ namespace MissionPlanner.GCSViews.ConfigurationView
                     }
 
                     double requested = (double)_changes[value];
-                    MainV2.comPort.setParam(value, requested);
+                    if (!MainV2.comPort.setParam(value, requested))
+                    {
+                        // refused (parameters locked) or not answered: the change stays pending and is reported
+                        notKept.Add(value + ": not written, the change was refused");
+                        error++;
+                        continue;
+                    }
 
                     // Sarus: compare with what the aircraft actually holds. Ask again rather than trusting the
                     // write acknowledgement: some values are re-limited by the firmware after it acknowledges them
@@ -1133,7 +1139,11 @@ namespace MissionPlanner.GCSViews.ConfigurationView
             {
                 try
                 {
-                    MainV2.comPort.setParam(new[] { "FORMAT_VERSION", "SYSID_SW_MREV" }, 0);
+                    if (!MainV2.comPort.setParam(new[] { "FORMAT_VERSION", "SYSID_SW_MREV" }, 0))
+                    {
+                        CustomMessageBox.Show("The reset was refused. Nothing was changed.", "Reset");
+                        return;
+                    }
                     Thread.Sleep(1000);
                     MainV2.comPort.doReboot(false, true);
                     MainV2.comPort.BaseStream.Close();

@@ -712,9 +712,6 @@ namespace MissionPlanner
 
             InitializeComponent();
 
-            // Sarus: blinking red banner when parameters ask for more than the airframe can do
-            SarusLimitsUI.Attach(this);
-
             // Sarus: siren and continue / hold / return when a mission is not going as set
             SarusFlightAlarm.Attach(this);
 
@@ -737,6 +734,9 @@ namespace MissionPlanner
             ThemeManager.LoadTheme(Settings.Instance["theme"]);
 
             Utilities.ThemeManager.ApplyThemeTo(this);
+
+            // Sarus: blinking red banner when parameters ask for more than the airframe can do (after theming, which skips it anyway)
+            SarusLimitsUI.Attach(this);
 
 
             // define default basestream
@@ -1109,8 +1109,16 @@ namespace MissionPlanner
                 this.Icon = Icon.FromHandle(((Bitmap) Program.IconFile).GetHicon());
             }
 
-            MenuArduPilot.Image = new Bitmap(Properties.Resources._0d92fed790a3a70170e61a86db103f399a595c70,
-                (int) (200), 31);
+            // scaled once with high quality resampling; the default shrink of the 383x60 badge looks blurry
+            var badge = new Bitmap(200, 31);
+            using (var bg = Graphics.FromImage(badge))
+            {
+                bg.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+                bg.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.HighQuality;
+                bg.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.HighQuality;
+                bg.DrawImage(Properties.Resources._0d92fed790a3a70170e61a86db103f399a595c70, 0, 0, 200, 31);
+            }
+            MenuArduPilot.Image = badge;
             MenuArduPilot.Width = MenuArduPilot.Image.Width;
 
             if (Program.Logo2 != null)

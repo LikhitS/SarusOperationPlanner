@@ -409,7 +409,8 @@ namespace MissionPlanner.Joystick
                         }
                         break;
                     case buttonfunction.Mount_Mode:
-                        _context.Send( delegate
+                        // posted, not sent: the Sarus password prompt must not freeze the sticks
+                        _context.Post( delegate
                         {
                             try
                             {
@@ -539,7 +540,8 @@ namespace MissionPlanner.Joystick
                         }, null);
                         break;
                     case buttonfunction.Toggle_Pan_Stab:
-                        _context.Send( delegate
+                        // posted, not sent: the Sarus password prompt must not freeze the sticks
+                        _context.Post( delegate
                         {
                             try
                             {

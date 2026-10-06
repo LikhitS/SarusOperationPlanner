@@ -186,9 +186,30 @@ namespace MissionPlanner.ArduPilot
                 case MAVLink.MAV_CMD.STORAGE_FORMAT:
                 case MAVLink.MAV_CMD.START_RX_PAIR:
                 case MAVLink.MAV_CMD.SCRIPTING:
+                case MAVLink.MAV_CMD.DO_AUTOTUNE_ENABLE:
                     return true;
+                case MAVLink.MAV_CMD.DO_AUX_FUNCTION:
+                    return AuxFunctionChangesSetup((int) param1);
                 case MAVLink.MAV_CMD.PREFLIGHT_REBOOT_SHUTDOWN:
                     return !(param1 == 0 || param1 == 1 || param1 == 2);
+                default:
+                    return false;
+            }
+        }
+
+        /// <summary>
+        /// Auxiliary functions that save parameters or calibrations; the same numbers the firmware refuses while
+        /// locked (SAVE_TRIM, AUTOTUNE, LEARN_CRUISE, COMPASS_LEARN, ARSPD_CALIBRATE, FW_AUTOTUNE,
+        /// TRIM_TO_CURRENT_SERVO_RC, OPTFLOW_CAL, FFT_NOTCH_TUNE, MAG_CAL, AUTOTUNE_TEST_GAINS, QUICKTUNE,
+        /// AHRS_AUTO_TRIM).
+        /// </summary>
+        public static bool AuxFunctionChangesSetup(int function)
+        {
+            switch (function)
+            {
+                case 5: case 17: case 50: case 62: case 91: case 107: case 155: case 158: case 162: case 171:
+                case 180: case 181: case 182:
+                    return true;
                 default:
                     return false;
             }

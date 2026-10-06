@@ -600,6 +600,7 @@ namespace MissionPlanner
 
         public void Close()
         {
+            sarusConfirmed.Clear();
             try
             {
                 Terrain?.UnSub();
@@ -1525,6 +1526,13 @@ Sarus Operation Planner waits for 2 valid heartbeat packets before connecting
 
         public bool setupSigning(uint sysid, byte compid, string userseed, byte[] key = null)
         {
+            // Sarus: setting or clearing the aircraft's signing key changes its setup
+            if (!SarusAllowChange(sysid, compid, "signing setup"))
+            {
+                log.Warn("setupSigning refused: setup is locked");
+                return false;
+            }
+
             byte[] shauser;
             bool clearkey = false;
 
@@ -1649,7 +1657,7 @@ Sarus Operation Planner waits for 2 valid heartbeat packets before connecting
             }
 
             // Sarus: changing a parameter needs the admin password (SarusLock); reading stays open
-            if (!SarusLock.AllowChange("parameter " + paramname))
+            if (!SarusAllowChange(sysid, compid, "parameter " + paramname))
             {
                 log.Warn("setParam " + paramname + " refused: parameters are locked");
                 return false;
@@ -2670,7 +2678,7 @@ Sarus Operation Planner waits for 2 valid heartbeat packets before connecting
             float p5, float p6, float p7, bool requireack = true, Action uicallback = null)
         {
             // Sarus: calibrations, resets and bootloader commands need the admin password (SarusLock)
-            if (SarusLock.IsSetupCommand(actionid, p1) && !SarusLock.AllowChange("command " + actionid))
+            if (SarusLock.IsSetupCommand(actionid, p1) && !SarusAllowChange(sysid, compid, "command " + actionid))
             {
                 log.Warn("doCommand " + actionid + " refused: setup is locked");
                 return false;
@@ -2825,7 +2833,7 @@ Sarus Operation Planner waits for 2 valid heartbeat packets before connecting
             MAV_FRAME frame = MAV_FRAME.GLOBAL)
         {
             // Sarus: calibrations, resets and bootloader commands need the admin password (SarusLock)
-            if (SarusLock.IsSetupCommand(actionid, p1) && !SarusLock.AllowChange("command " + actionid))
+            if (SarusLock.IsSetupCommand(actionid, p1) && !SarusAllowChange(sysid, compid, "command " + actionid))
             {
                 log.Warn("doCommandInt " + actionid + " refused: setup is locked");
                 return false;
@@ -2841,7 +2849,7 @@ Sarus Operation Planner waits for 2 valid heartbeat packets before connecting
             MAV_FRAME frame = MAV_FRAME.GLOBAL)
         {
             // Sarus: calibrations, resets and bootloader commands need the admin password (SarusLock)
-            if (SarusLock.IsSetupCommand(actionid, p1) && !SarusLock.AllowChange("command " + actionid))
+            if (SarusLock.IsSetupCommand(actionid, p1) && !SarusAllowChange(sysid, compid, "command " + actionid))
             {
                 log.Warn("doCommandInt " + actionid + " refused: setup is locked");
                 return false;
@@ -5064,6 +5072,10 @@ Sarus Operation Planner waits for 2 valid heartbeat packets before connecting
 
                         MAVlist[sysid, compid].cs.messages.Add((DateTime.Now, logdata));
 
+                        // Sarus lock: the aircraft locked itself or refused a change; check again before the next one
+                        if (logdata.StartsWith("Sarus: ") && logdata.Contains("locked"))
+                            SarusForgetUnlock(sysid, compid);
+
                         // cap list at 1000 element
                         while (MAVlist[sysid, compid].cs.messages.Count > 1000)
                             MAVlist[sysid, compid].cs.messages.RemoveAt(0);
@@ -5207,7 +5219,7 @@ Sarus Operation Planner waits for 2 valid heartbeat packets before connecting
         private void PacketReceived(MAVLinkMessage buffer)
         {
             MAVLINK_MSG_ID type = (MAVLINK_MSG_ID) buffer.msgid;
-            (MAVLINK_MSG_ID msgId, Func<MAVLinkMessage, bool> function, bool exclusive, uint sysid, byte compid)[] list;
+            (int id, MAVLINK_MSG_ID msgId, Func<MAVLinkMessage, bool> function, bool exclusive, uint sysid, byte compid)[] list;
 
             // lock to grab the list, because this is public, to prevent a recursion
             lock (Subscriptions)
@@ -5233,8 +5245,11 @@ Sarus Operation Planner waits for 2 valid heartbeat packets before connecting
             }
         }
 
-        readonly private List<(MAVLINK_MSG_ID msgId, Func<MAVLinkMessage, bool> function, bool exclusive, uint sysid, byte compid)> Subscriptions =
-            new List<(MAVLINK_MSG_ID, Func<MAVLinkMessage, bool>, bool, uint, byte)>();
+        readonly private List<(int id, MAVLINK_MSG_ID msgId, Func<MAVLinkMessage, bool> function, bool exclusive, uint sysid, byte compid)> Subscriptions =
+            new List<(int, MAVLINK_MSG_ID, Func<MAVLinkMessage, bool>, bool, uint, byte)>();
+
+        // ids handed out by SubscribeToPacketType; never 0, so a caller's unset id matches nothing
+        private static int subscriptionSequence;
 
         /// <summary>
         /// Subscribe to a packet on the current target MAV. use OnPacketReceived to get all MAVs
@@ -5248,7 +5263,12 @@ Sarus Operation Planner waits for 2 valid heartbeat packets before connecting
         {
             log.Info($"SubscribeToPacketType {msgid} {function} {exclusive} {sysid} {compid}");
 
-            var item = (msgid, function, exclusive, sysid, compid);
+            // a unique id per subscription: a delegate's hash is the same for every lambda on .NET Framework, so
+            // the tuple's hash could not tell two subscriptions apart and an unsubscribe could remove someone else's
+            var id = Interlocked.Increment(ref subscriptionSequence);
+            if (id == 0)
+                id = Interlocked.Increment(ref subscriptionSequence);
+            var item = (id, msgid, function, exclusive, sysid, compid);
 
             lock (Subscriptions)
             {
@@ -5269,7 +5289,7 @@ Sarus Operation Planner waits for 2 valid heartbeat packets before connecting
                 Subscriptions.Add(item);
             }
 
-            return item.GetHashCode();
+            return id;
         }
 
         /// <summary>
@@ -5289,9 +5309,26 @@ Sarus Operation Planner waits for 2 valid heartbeat packets before connecting
         /// </summary>
         public async Task<MAV_RESULT?> SarusLockUnlockAsync(uint sysid, byte compid)
         {
+            // one handshake at a time on this link: each GET_NONCE replaces the aircraft's nonce
+            await sarusHandshake.WaitAsync().ConfigureAwait(false);
+            try
+            {
+                return await SarusLockUnlockOnceAsync(sysid, compid).ConfigureAwait(false);
+            }
+            finally
+            {
+                sarusHandshake.Release();
+            }
+        }
+
+        private readonly SemaphoreSlim sarusHandshake = new SemaphoreSlim(1, 1);
+
+        private async Task<MAV_RESULT?> SarusLockUnlockOnceAsync(uint sysid, byte compid)
+        {
             var nonceReply = await SarusLockRequestAsync(sysid, compid, SarusLock.OP_GET_NONCE, null, null)
                 .ConfigureAwait(false);
-            if (nonceReply == null)
+            // ArduPilot without the Sarus lock answers with UNSUPPORTED, or not at all
+            if (nonceReply == null || nonceReply.Value.result != (byte) MAV_RESULT.ACCEPTED)
                 return null;
             if ((nonceReply.Value.data[1] & SarusLock.FLAG_ACTIVE) == 0)
                 return MAV_RESULT.ACCEPTED;
@@ -5318,6 +5355,54 @@ Sarus Operation Planner waits for 2 valid heartbeat packets before connecting
         }
 
         private int sarusLockSequence;
+
+        // aircraft confirmed unlocked for this station, and when; DateTime.MaxValue marks an aircraft without the
+        // Sarus lock, which needs no further checks while connected
+        private readonly ConcurrentDictionary<(uint, byte), DateTime> sarusConfirmed =
+            new ConcurrentDictionary<(uint, byte), DateTime>();
+
+        /// <summary>
+        /// Gate for a change to one aircraft: the app's admin password (SarusLock.AllowChange), then the aircraft's
+        /// own lock. A Sarus aircraft locks itself again after a reboot, or after 10 s without traffic while
+        /// disarmed, so when the app is unlocked and the aircraft was not confirmed in the last few seconds, it is
+        /// checked and unlocked again before the change goes out.
+        /// </summary>
+        public bool SarusAllowChange(uint sysid, byte compid, string what)
+        {
+            if (!SarusLock.AllowChange(what))
+                return false;
+            if (!SarusLock.Configured || !SarusLock.Unlocked || BaseStream == null || !BaseStream.IsOpen)
+                return true;
+            if (sarusConfirmed.TryGetValue((sysid, compid), out var at) &&
+                (at == DateTime.MaxValue || DateTime.UtcNow - at < TimeSpan.FromSeconds(3)))
+                return true;
+
+            MAV_RESULT? r;
+            try
+            {
+                // run off the caller's context so a call from the UI thread cannot deadlock on its own replies
+                r = Task.Run(() => SarusLockUnlockAsync(sysid, compid)).Result;
+            }
+            catch (Exception ex)
+            {
+                log.Error("Sarus lock: unlock before " + what + " failed", ex);
+                return true; // the aircraft decides; a refusal comes back as its own message
+            }
+
+            if (r == null)
+                sarusConfirmed[(sysid, compid)] = DateTime.MaxValue;
+            else if (r == MAV_RESULT.ACCEPTED)
+                sarusConfirmed[(sysid, compid)] = DateTime.UtcNow;
+            else
+                log.Warn("Sarus lock: aircraft " + sysid + " did not unlock before " + what + ": " + r);
+            return true;
+        }
+
+        /// <summary>forget that an aircraft was unlocked, so the next change checks again</summary>
+        public void SarusForgetUnlock(uint sysid, byte compid)
+        {
+            sarusConfirmed.TryRemove((sysid, compid), out _);
+        }
 
         // one SECURE_COMMAND and its reply; no retries, because each GET_NONCE replaces the vehicle's nonce
         private async Task<mavlink_secure_command_reply_t?> SarusLockRequestAsync(uint sysid, byte compid, uint operation,
@@ -5446,7 +5531,7 @@ Sarus Operation Planner waits for 2 valid heartbeat packets before connecting
 
                 foreach (var valueTuple in sub)
                 {
-                    if (id == valueTuple.GetHashCode())
+                    if (id == valueTuple.id)
                     {
                         Subscriptions.Remove(valueTuple);
                         break;
@@ -6139,6 +6224,13 @@ Sarus Operation Planner waits for 2 valid heartbeat packets before connecting
         [Obsolete]
         public void EraseLog()
         {
+            // Sarus: erasing the aircraft's logs needs the admin password
+            if (!SarusAllowChange(MAV.sysid, MAV.compid, "log erase"))
+            {
+                log.Warn("EraseLog refused: setup is locked");
+                return;
+            }
+
             mavlink_log_erase_t req = new mavlink_log_erase_t();
 
             req.target_component = MAV.compid;

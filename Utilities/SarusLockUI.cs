@@ -37,8 +37,7 @@ namespace MissionPlanner.Utilities
         // called from any thread; the prompt itself always runs on the UI thread
         private static bool Ask(string what)
         {
-            // after a cancel, the next writes in the same batch are refused without asking again
-            if (DateTime.Now - declinedAt < TimeSpan.FromSeconds(5))
+            if (StillDeclined())
                 return false;
 
             var form = MainV2.instance;
@@ -48,11 +47,25 @@ namespace MissionPlanner.Utilities
             if (!form.InvokeRequired)
                 return Prompt(what);
 
+            // a prompt already open answers for this change too
+            var until = DateTime.Now.AddMinutes(2);
+            while (prompting && DateTime.Now < until)
+                Thread.Sleep(100);
+            if (SarusLock.Unlocked)
+                return true;
+            if (StillDeclined())
+                return false;
+
+            var expired = false;
             try
             {
-                var ar = form.BeginInvoke((Func<bool>) (() => Prompt(what)));
+                // a request that has given up must not show its prompt later
+                var ar = form.BeginInvoke((Func<bool>) (() => !expired && Prompt(what)));
                 if (!ar.AsyncWaitHandle.WaitOne(TimeSpan.FromMinutes(2)))
+                {
+                    expired = true;
                     return false;
+                }
                 return (bool) form.EndInvoke(ar);
             }
             catch (Exception ex)
@@ -61,6 +74,28 @@ namespace MissionPlanner.Utilities
                 log.Info("Sarus lock prompt not shown: " + ex.Message);
                 return false;
             }
+        }
+
+        // after a cancel, the rest of the same batch is refused without asking again; the batch is over once 3 s
+        // pass without a change
+        private static bool StillDeclined()
+        {
+            if (DateTime.Now - declinedAt >= TimeSpan.FromSeconds(3))
+                return false;
+            declinedAt = DateTime.Now;
+            return true;
+        }
+
+        // runs slow work (scrypt, aircraft handshakes) off the UI thread while the screens keep updating
+        private static T Responsive<T>(Func<T> work)
+        {
+            var t = Task.Run(work);
+            while (!t.IsCompleted)
+            {
+                Application.DoEvents();
+                Thread.Sleep(15);
+            }
+            return t.Result;
         }
 
         private static bool Prompt(string what)
@@ -87,7 +122,8 @@ namespace MissionPlanner.Utilities
                     Cursor.Current = Cursors.WaitCursor;
                     try
                     {
-                        ok = SarusLock.TryUnlock(pw);
+                        var typed = pw;
+                        ok = Responsive(() => SarusLock.TryUnlock(typed));
                     }
                     finally
                     {
@@ -99,7 +135,11 @@ namespace MissionPlanner.Utilities
                         Cursor.Current = Cursors.WaitCursor;
                         try
                         {
-                            UnlockAllAircraft();
+                            Responsive(() =>
+                            {
+                                UnlockAllAircraft();
+                                return true;
+                            });
                         }
                         finally
                         {
@@ -195,13 +235,22 @@ namespace MissionPlanner.Utilities
                 }
                 else
                 {
+                    // only an aircraft this station unlocked needs locking; ArduPilot without the lock has nothing to lock
+                    var flags = await port.SarusLockStatusAsync(sysid, compid).ConfigureAwait(false);
+                    if (flags == null || (flags.Value & SarusLock.FLAG_UNLOCKED_BY_YOU) == 0)
+                        return;
                     var ok = await port.SarusLockLockAsync(sysid, compid).ConfigureAwait(false);
                     log.Info("Sarus lock: lock aircraft " + sysid + " -> " + ok);
+                    if (!ok)
+                        problems.Add("Aircraft " + sysid + " did not confirm the lock. It locks by itself after 10 s " +
+                                     "on the ground without hearing from this station, or when it restarts.");
                 }
             }
             catch (Exception ex)
             {
                 log.Error(ex);
+                problems.Add("Aircraft " + sysid + ": the " + (unlock ? "unlock" : "lock") + " did not complete (" +
+                             ex.Message + ").");
             }
         }
 

@@ -1085,7 +1085,7 @@ namespace MissionPlanner.ArduPilot.Mavlink
         public bool kCmdCreateDirectory(string file, CancellationTokenSource cancel)
         {
             // Sarus: writing files to the vehicle needs the admin password (SarusLock)
-            if (!SarusLock.AllowChange("file write"))
+            if (!_mavint.SarusAllowChange(_sysid, _compid, "file write"))
             {
                 log.Warn("MAVFtp write refused: setup is locked");
                 return false;
@@ -1184,7 +1184,7 @@ namespace MissionPlanner.ArduPilot.Mavlink
         public bool kCmdCreateFile(string file, ref int size, CancellationTokenSource cancel)
         {
             // Sarus: writing files to the vehicle needs the admin password (SarusLock)
-            if (!SarusLock.AllowChange("file write"))
+            if (!_mavint.SarusAllowChange(_sysid, _compid, "file write"))
             {
                 log.Warn("MAVFtp write refused: setup is locked");
                 return false;
@@ -1499,7 +1499,7 @@ namespace MissionPlanner.ArduPilot.Mavlink
         public bool kCmdOpenFileWO(string file, ref int size, CancellationTokenSource cancel)
         {
             // Sarus: writing files to the vehicle needs the admin password (SarusLock)
-            if (!SarusLock.AllowChange("file write"))
+            if (!_mavint.SarusAllowChange(_sysid, _compid, "file write"))
             {
                 log.Warn("MAVFtp write refused: setup is locked");
                 return false;
@@ -1718,7 +1718,7 @@ namespace MissionPlanner.ArduPilot.Mavlink
         public bool kCmdRemoveDirectory(string file, CancellationTokenSource cancel)
         {
             // Sarus: writing files to the vehicle needs the admin password (SarusLock)
-            if (!SarusLock.AllowChange("file write"))
+            if (!_mavint.SarusAllowChange(_sysid, _compid, "file write"))
             {
                 log.Warn("MAVFtp write refused: setup is locked");
                 return false;
@@ -1809,7 +1809,7 @@ namespace MissionPlanner.ArduPilot.Mavlink
         public bool kCmdRemoveFile(string file, CancellationTokenSource cancel)
         {
             // Sarus: writing files to the vehicle needs the admin password (SarusLock)
-            if (!SarusLock.AllowChange("file write"))
+            if (!_mavint.SarusAllowChange(_sysid, _compid, "file write"))
             {
                 log.Warn("MAVFtp write refused: setup is locked");
                 return false;
@@ -1900,7 +1900,7 @@ namespace MissionPlanner.ArduPilot.Mavlink
         public bool kCmdRename(string src, string dest, CancellationTokenSource cancel)
         {
             // Sarus: writing files to the vehicle needs the admin password (SarusLock)
-            if (!SarusLock.AllowChange("file write"))
+            if (!_mavint.SarusAllowChange(_sysid, _compid, "file write"))
             {
                 log.Warn("MAVFtp write refused: setup is locked");
                 return false;
@@ -2093,7 +2093,7 @@ namespace MissionPlanner.ArduPilot.Mavlink
         public bool kCmdTruncateFile(string file, CancellationTokenSource cancel)
         {
             // Sarus: writing files to the vehicle needs the admin password (SarusLock)
-            if (!SarusLock.AllowChange("file write"))
+            if (!_mavint.SarusAllowChange(_sysid, _compid, "file write"))
             {
                 log.Warn("MAVFtp write refused: setup is locked");
                 return false;
@@ -2176,7 +2176,7 @@ namespace MissionPlanner.ArduPilot.Mavlink
         public bool kCmdWriteFile(byte[] data, uint destoffset, string friendlyname, CancellationTokenSource cancel)
         {
             // Sarus: writing files to the vehicle needs the admin password (SarusLock)
-            if (!SarusLock.AllowChange("file write"))
+            if (!_mavint.SarusAllowChange(_sysid, _compid, "file write"))
             {
                 log.Warn("MAVFtp write refused: setup is locked");
                 return false;

@@ -233,7 +233,8 @@ namespace MissionPlanner.Controls
                 using (var edge = new Pen(pressed ? Color.FromArgb(90, 0, 0, 0) : Color.FromArgb(55, 255, 255, 255), 1f))
                     gr.DrawLine(edge, face.X + radius, face.Y + 0.5f, face.Right - radius, face.Y + 0.5f);
 
-                using (var outline = new Pen(Color.FromArgb(150, Outline), 1f))
+                // a theme that sets an edge colour gets it at full strength, so it keeps its contrast against the page
+                using (var outline = new Pen(Outline.A > 0 ? Outline : Color.FromArgb(150, Outline), 1f))
                     gr.DrawPath(outline, facePath);
 
                 if (!Enabled)
@@ -246,11 +247,11 @@ namespace MissionPlanner.Controls
                     using (var focusPath = RoundRect(RectangleF.Inflate(face, -3, -3), radius - 1))
                         gr.DrawPath(focus, focusPath);
 
-                var format = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center };
                 string display = Text;
                 int amppos = display.IndexOf('&');
                 if (amppos != -1)
                     display = display.Remove(amppos, 1);
+                using (var format = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center })
                 using (var text = new SolidBrush(Enabled ? TextColor : TextColorNotEnabled))
                     gr.DrawString(display, Font, text, face, format);
             }

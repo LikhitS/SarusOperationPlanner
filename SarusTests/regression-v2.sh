@@ -7,13 +7,29 @@ TAG=$1; SIM=$2; LOCKSIM=$3
 R='C:/dev/Sarus/tests/run-sitl-checks.ps1'
 SUM=/c/dev/Sarus/tests/regression-$TAG.txt
 echo "Regression $TAG on $SIM started $(date)" > $SUM
+FAILED=0
+LAST_RC=0
 step() {
     name=$1; n=$2
     f=/c/dev/Sarus/tests/report-$n.txt
-    echo "STEP $name | $(grep -c 'CHECK PASS' $f 2>/dev/null) pass | $(grep RESULT $f 2>/dev/null)" | tee -a $SUM
+    res=$(grep RESULT $f 2>/dev/null)
+    if [ -z "$res" ] || [ "$LAST_RC" -ne 0 ] || ! echo "$res" | grep -q 'RESULT ALL_PASS'; then
+        FAILED=$((FAILED+1))
+        [ -z "$res" ] && res="RESULT MISSING"
+        res="FAIL ($res, runner exit $LAST_RC)"
+    fi
+    echo "STEP $name | $(grep -c 'CHECK PASS' $f 2>/dev/null) pass | $res" | tee -a $SUM
     grep "CHECK FAIL" $f 2>/dev/null | cut -c1-200 | sed 's/^/    /' | tee -a $SUM
 }
-ps() { powershell -ExecutionPolicy Bypass -File "$R" "$@" > /dev/null 2>&1; }
+# Runs one harness step. The old report is deleted first so a stale one cannot pass as fresh; the runner's
+# output goes to run-<name>.log (not /dev/null) so a start-up failure stays visible.
+ps() {
+    n=""; prev=""
+    for a in "$@"; do [ "$prev" = "-Name" ] && n=$a; prev=$a; done
+    rm -f "/c/dev/Sarus/tests/report-$n.txt" "/c/dev/Sarus/tests/report-$n-params.csv"
+    powershell -ExecutionPolicy Bypass -File "$R" "$@" > "/c/dev/Sarus/tests/run-$n.log" 2>&1
+    LAST_RC=$?
+}
 
 SARUS_QUICK=1 SARUS_PARAM_EDITOR_CHECKS=1 ps -Name $TAG-parameditor -SimSet $SIM; step "param editor" $TAG-parameditor
 ps -Name $TAG-quadplane -SimSet $SIM; step "quadplane flight" $TAG-quadplane
@@ -36,5 +52,6 @@ if [ -n "$LOCKSIM" ]; then
     SARUS_QUICK=1 SARUS_LOCKTEST=1 ps -Name $TAG-lock -SimSet $LOCKSIM; step "parameter lock" $TAG-lock
     SARUS_QUICK=1 SARUS_LOCKTEST=1 ps -Name $TAG-lock-copter -SimSet $LOCKSIM -Vehicle copter; step "parameter lock, copter" $TAG-lock-copter
 fi
-echo "Regression $TAG finished $(date)" | tee -a $SUM
+echo "Regression $TAG finished $(date), $FAILED step(s) failed" | tee -a $SUM
 echo "REGRESSION DONE"
+[ "$FAILED" -eq 0 ]

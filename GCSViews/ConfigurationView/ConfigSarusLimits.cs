@@ -54,6 +54,8 @@ namespace MissionPlanner.GCSViews.ConfigurationView
         private readonly MyButton save = new MyButton();
         private readonly Label status = new Label();
         private readonly ListBox problems = new ListBox();
+        private readonly Font titleFont = new Font("Segoe UI Semibold", 14f);
+        private readonly Font headingFont = new Font("Segoe UI Semibold", 11f);
         private string key;
         private SarusEnvelope env;
 
@@ -64,7 +66,7 @@ namespace MissionPlanner.GCSViews.ConfigurationView
 
             var stack = new FlowLayoutPanel { Dock = DockStyle.Top, AutoSize = true, FlowDirection = FlowDirection.TopDown, WrapContents = false };
             title.Text = "Airframe limits";
-            title.Font = new Font("Segoe UI Semibold", 14f);
+            title.Font = titleFont;
             title.AutoSize = true;
             intro.Text = "Enter what this airframe can physically do. Any parameter that asks for more blinks red, here, in the " +
                          "parameter list and across the top of the window. Your values are never changed or refused. Leave a " +
@@ -81,7 +83,7 @@ namespace MissionPlanner.GCSViews.ConfigurationView
 
             var alarmTitle = new Label
             {
-                Text = "In-flight alarm", Font = new Font("Segoe UI Semibold", 11f), AutoSize = true, Margin = new Padding(0, 16, 0, 2)
+                Text = "In-flight alarm", Font = headingFont, AutoSize = true, Margin = new Padding(0, 16, 0, 2)
             };
             var alarmIntro = new Label
             {
@@ -110,7 +112,7 @@ namespace MissionPlanner.GCSViews.ConfigurationView
 
             var probTitle = new Label
             {
-                Text = "Parameters beyond these limits now", Font = new Font("Segoe UI Semibold", 11f), AutoSize = true,
+                Text = "Parameters beyond these limits now", Font = headingFont, AutoSize = true,
                 Margin = new Padding(0, 16, 0, 2)
             };
             problems.Width = 640;
@@ -120,6 +122,35 @@ namespace MissionPlanner.GCSViews.ConfigurationView
 
             stack.Controls.AddRange(new Control[] { title, intro, grid, alarmTitle, alarmIntro, alarmOn, alarmGrid, save, status, probTitle, problems });
             Controls.Add(stack);
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                titleFont.Dispose();
+                headingFont.Dispose();
+            }
+            base.Dispose(disposing);
+        }
+
+        /// <summary>
+        /// Red for error text on the given background: the alert red where it reads (at least 4.5:1), otherwise the same
+        /// red eased toward white, so it holds on the dark themes too
+        /// </summary>
+        private static Color ErrorText(Color back)
+        {
+            if (back.A < 255)
+                back = Color.FromArgb(back.R, back.G, back.B);
+            var red = SarusLimitsUI.AlertRed;
+            for (double t = 0; t <= 1.0; t += 0.05)
+            {
+                var c = Color.FromArgb((int) Math.Round(red.R + (255 - red.R) * t),
+                    (int) Math.Round(red.G + (255 - red.G) * t), (int) Math.Round(red.B + (255 - red.B) * t));
+                if (ThemeManager.Contrast(c, back) >= 4.5)
+                    return c;
+            }
+            return Color.White;
         }
 
         private static void AddRow(TableLayoutPanel t, string label, TextBox box, string unit)
@@ -139,7 +170,12 @@ namespace MissionPlanner.GCSViews.ConfigurationView
             env = key != null ? SarusEnvelope.Load(key) : new SarusEnvelope();
 
             grid.SuspendLayout();
-            grid.Controls.Clear();
+            // Controls.Clear() only detaches; dispose the old rows so each visit does not leak them
+            foreach (var old in grid.Controls.Cast<Control>().ToList())
+            {
+                grid.Controls.Remove(old);
+                old.Dispose();
+            }
             foreach (var f in fields)
             {
                 f.Box = null;
@@ -165,7 +201,7 @@ namespace MissionPlanner.GCSViews.ConfigurationView
                 : "Flight controller " + key + ", " + kind + ".";
             ShowProblems();
             ThemeManager.ApplyThemeTo(this);
-            problems.ForeColor = SarusLimitsUI.AlertRed;
+            problems.ForeColor = ErrorText(problems.BackColor);
         }
 
         private void ShowProblems()
@@ -216,7 +252,7 @@ namespace MissionPlanner.GCSViews.ConfigurationView
 
             if (bad.Count > 0)
             {
-                status.ForeColor = SarusLimitsUI.AlertRed;
+                status.ForeColor = ErrorText(status.BackColor);
                 status.Text = "Not saved. Use a positive number, or leave the box empty, for: " + string.Join(", ", bad) + ".";
                 return;
             }
@@ -235,7 +271,7 @@ namespace MissionPlanner.GCSViews.ConfigurationView
             }
             catch (Exception ex)
             {
-                status.ForeColor = SarusLimitsUI.AlertRed;
+                status.ForeColor = ErrorText(status.BackColor);
                 status.Text = "Could not save: " + ex.Message;
             }
             ShowProblems();

@@ -18,6 +18,11 @@ namespace MissionPlanner.Utilities
         public static readonly Color AlertRed = Color.FromArgb(0xB3, 0x26, 0x1E);
         public static readonly Color AlertRedDim = Color.FromArgb(0x6E, 0x17, 0x12);
 
+        /// <summary>
+        /// Tag on the banner panel: ThemeManager leaves it, and everything inside it, alone, so white on red holds in every theme
+        /// </summary>
+        public const string KeepColoursTag = "sarus-keep-colours";
+
         private static Panel banner;
         private static Label bannerText;
         private static string dismissedFor;
@@ -77,7 +82,12 @@ namespace MissionPlanner.Utilities
 
         public static void Attach(MainV2 form)
         {
-            banner = new Panel { Dock = DockStyle.Top, Height = 34, Visible = false, BackColor = AlertRed, Padding = new Padding(10, 0, 6, 0) };
+            // docked below the menu bar: it moves the screens down while shown, but never covers the HUD
+            banner = new Panel
+            {
+                Dock = DockStyle.Top, Height = 34, Visible = false, BackColor = AlertRed, ForeColor = Color.White,
+                Padding = new Padding(10, 0, 6, 0), Tag = KeepColoursTag
+            };
             bannerText = new Label
             {
                 Dock = DockStyle.Fill, ForeColor = Color.White, TextAlign = ContentAlignment.MiddleLeft,
@@ -86,15 +96,17 @@ namespace MissionPlanner.Utilities
             var details = new Button
             {
                 Text = "Details", Dock = DockStyle.Right, Width = 80, FlatStyle = FlatStyle.Flat, ForeColor = Color.White,
+                BackColor = Color.Transparent, UseVisualStyleBackColor = false, Tag = KeepColoursTag,
                 AccessibleName = "Show every parameter beyond the airframe limits"
             };
-            details.FlatAppearance.BorderColor = Color.White;
+            StyleOutlinedButton(details);
             var hide = new Button
             {
                 Text = "Hide", Dock = DockStyle.Right, Width = 70, FlatStyle = FlatStyle.Flat, ForeColor = Color.White,
+                BackColor = Color.Transparent, UseVisualStyleBackColor = false, Tag = KeepColoursTag,
                 AccessibleName = "Hide this alert until the parameters change again"
             };
-            hide.FlatAppearance.BorderColor = Color.White;
+            StyleOutlinedButton(hide);
             details.Click += (s, e) => CustomMessageBox.Show(
                 string.Join("\n", Current.Select(v => v.Message)) +
                 "\n\nThe values were set as you asked; Sarus does not change them. Check the airframe limits page or the parameters.",
@@ -130,6 +142,14 @@ namespace MissionPlanner.Utilities
             blink.Start();
         }
 
+        private static void StyleOutlinedButton(Button b)
+        {
+            b.FlatAppearance.BorderColor = Color.White;
+            b.FlatAppearance.BorderSize = 1;
+            b.FlatAppearance.MouseOverBackColor = AlertRedDim;
+            b.FlatAppearance.MouseDownBackColor = AlertRedDim;
+        }
+
         private static string Signature(IEnumerable<SarusEnvelope.Violation> v) =>
             string.Join("|", v.Select(x => x.Param + "=" + x.Value.ToString("R")));
 
@@ -145,10 +165,29 @@ namespace MissionPlanner.Utilities
                 else
                 {
                     var env = EnvelopeForCurrent();
-                    Current = env.AnyLimitEntered
-                        ? env.CheckAll(KindForCurrent(),
-                            port.MAV.param.Select(p => new KeyValuePair<string, double>(p.Name, p.Value)))
-                        : new List<SarusEnvelope.Violation>();
+                    if (env.AnyLimitEntered)
+                    {
+                        // a copy, so a parameter refresh on another thread cannot change the list under the check
+                        MAVLink.MAVLinkParam[] snapshot;
+                        try
+                        {
+                            snapshot = port.MAV.param.ToArray();
+                        }
+                        catch (InvalidOperationException)
+                        {
+                            return; // list changed mid-copy; the next tick checks again
+                        }
+                        catch (ArgumentException)
+                        {
+                            return;
+                        }
+                        Current = env.CheckAll(KindForCurrent(),
+                            snapshot.Where(p => p != null).Select(p => new KeyValuePair<string, double>(p.Name, p.Value)));
+                    }
+                    else
+                    {
+                        Current = new List<SarusEnvelope.Violation>();
+                    }
                 }
 
                 if (Current.Count == 0)
@@ -165,6 +204,7 @@ namespace MissionPlanner.Utilities
                 if (sig != dismissedFor && !banner.Visible)
                 {
                     log.Warn("Sarus airframe limits: " + string.Join("; ", Current.Select(v => v.Message)));
+                    banner.BackColor = AlertRed;
                     banner.Visible = true;
                 }
             }

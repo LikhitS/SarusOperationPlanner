@@ -197,6 +197,9 @@ namespace MissionPlanner.Utilities
                         mav.GetParam(mav.sysidcurrent, (byte)mav.compidcurrent, parameter);
                     }
                     // PARAM_SET uses float32; only allocate consecutive exact IDs.
+                    // Sarus: renumbering the aircraft is a parameter change
+                    if (!mav.SarusAllowChange(mav.sysidcurrent, (byte)mav.compidcurrent, "system id"))
+                        throw new InvalidOperationException("changing the system id needs the Sarus admin password");
                     localsysid = AllocateSystemId(parameter == "MAV_SYSID" ? 0xFFFFFFU : 255U);
                     mav.sendPacket(new MAVLink.mavlink_param_set_t
                     {

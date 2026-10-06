@@ -131,6 +131,19 @@ namespace MissionPlanner.Utilities
                 }
             }
 
+            // Sarus themes: a button edge that shows against the page, and a disabled label that reads as disabled. The
+            // theme files carry neither; every other theme keeps Mission Planner's own button look.
+            if (strThemeName != null && strThemeName.StartsWith("Sarus", StringComparison.OrdinalIgnoreCase))
+            {
+                ThemeManager.ButBorder = ThemeManager.SarusButtonBorder();
+                ThemeManager.ButtonTextColorNotEnabled = ThemeManager.SarusDisabledButtonText();
+            }
+            else
+            {
+                ThemeManager.ButBorder = Color.Empty;
+                ThemeManager.ButtonTextColorNotEnabled = Color.Empty;
+            }
+
             // Sarus: the opt-in Sarus Glass theme adds its own menu surface, window frame and button style
             SarusGlass.Apply(strThemeName);
 
@@ -292,6 +305,55 @@ namespace MissionPlanner.Utilities
 
 
 
+
+        private static double Luminance(Color c)
+        {
+            double Lin(int v)
+            {
+                double s = v / 255.0;
+                return s <= 0.03928 ? s / 12.92 : Math.Pow((s + 0.055) / 1.055, 2.4);
+            }
+            return 0.2126 * Lin(c.R) + 0.7152 * Lin(c.G) + 0.0722 * Lin(c.B);
+        }
+
+        /// <summary>WCAG contrast ratio of two opaque colours</summary>
+        public static double Contrast(Color a, Color b)
+        {
+            double la = Luminance(a), lb = Luminance(b);
+            return (Math.Max(la, lb) + 0.05) / (Math.Min(la, lb) + 0.05);
+        }
+
+        private static Color Mix(Color from, Color to, double t)
+        {
+            return Color.FromArgb((int) Math.Round(from.R + (to.R - from.R) * t),
+                (int) Math.Round(from.G + (to.G - from.G) * t),
+                (int) Math.Round(from.B + (to.B - from.B) * t));
+        }
+
+        /// <summary>
+        /// Button edge for the Sarus themes. Empty when the face already stands clear of the page; otherwise the text colour
+        /// eased toward the page until the edge reaches 3:1 against both page colours.
+        /// </summary>
+        internal static Color SarusButtonBorder()
+        {
+            if (Contrast(ButBG, BGColor) >= 3.0 && Contrast(ButBG, ControlBGColor) >= 3.0)
+                return Color.Empty;
+            for (double t = 0.35; t < 1.0; t += 0.05)
+            {
+                var edge = Mix(BGColor, TextColor, t);
+                if (Contrast(edge, BGColor) >= 3.1 && Contrast(edge, ControlBGColor) >= 3.1)
+                    return edge;
+            }
+            return TextColor;
+        }
+
+        /// <summary>the button label toward the dimmed face, so a disabled button does not look enabled</summary>
+        internal static Color SarusDisabledButtonText()
+        {
+            double a = ColorNotEnabled.A / 255.0;
+            var face = Mix(ButBG, Color.FromArgb(ColorNotEnabled.R, ColorNotEnabled.G, ColorNotEnabled.B), a);
+            return Mix(ButtonTextColor, face, 0.55);
+        }
 
         public static void StartThemeEditor()
         {
@@ -808,6 +870,10 @@ mc:Ignorable=""d""
 
             foreach (Control ctl in temp.Controls)
             {
+                // Sarus: controls that keep their own colours in every theme (the airframe limits banner)
+                if (ctl.Tag is string && (string) ctl.Tag == SarusLimitsUI.KeepColoursTag)
+                    continue;
+
                 if (ctl.GetType() == typeof(Panel))
                 {
                     ctl.BackColor = BGColor;
@@ -1070,6 +1136,10 @@ mc:Ignorable=""d""
 
             foreach (Control ctl in temp.Controls)
             {
+                // Sarus: controls that keep their own colours in every theme (the airframe limits banner)
+                if (ctl.Tag is string && (string) ctl.Tag == SarusLimitsUI.KeepColoursTag)
+                    continue;
+
                 if (ctl.GetType() == typeof(Label))
                 {
                     if (!(ctl.Tag is string && (string)ctl.Tag == "custom"))
@@ -1267,6 +1337,11 @@ mc:Ignorable=""d""
                     ctl.ForeColor = TextColor;
                     CheckedListBox txtr = (CheckedListBox)ctl;
                     txtr.BorderStyle = BorderStyle.None;
+                }
+                else if (ctl.GetType() == typeof(ListBox))
+                {
+                    ctl.BackColor = ControlBGColor;
+                    ctl.ForeColor = TextColor;
                 }
                 else if (ctl.GetType() == typeof(TabPage))
                 {

@@ -127,6 +127,12 @@ static class Harness
     [System.Runtime.InteropServices.DllImport("user32.dll")] static extern IntPtr GetDC(IntPtr hWnd);
     [System.Runtime.InteropServices.DllImport("user32.dll")] static extern int ReleaseDC(IntPtr hWnd, IntPtr hDC);
     [System.Runtime.InteropServices.DllImport("gdi32.dll")] static extern int GetDeviceCaps(IntPtr hdc, int index); // 118 DESKTOPHORZRES, 117 DESKTOPVERTRES
+    [System.Runtime.InteropServices.DllImport("user32.dll")] static extern IntPtr GetForegroundWindow();
+    [System.Runtime.InteropServices.DllImport("user32.dll")] static extern bool SetForegroundWindow(IntPtr hWnd);
+    [System.Runtime.InteropServices.DllImport("user32.dll")] static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint pid);
+    [System.Runtime.InteropServices.DllImport("user32.dll", CharSet = System.Runtime.InteropServices.CharSet.Unicode)]
+    static extern int GetWindowText(IntPtr hWnd, System.Text.StringBuilder text, int max);
+    [System.Runtime.InteropServices.DllImport("user32.dll")] static extern bool PrintWindow(IntPtr hWnd, IntPtr hdc, uint flags); // 2 PW_RENDERFULLCONTENT
 
     // Every parameter: write a different valid value, read it back fresh from the aircraft, restore, verify.
     // GCS defects (timeouts, cache != aircraft, failed restore) are FAILs; firmware limits are recorded in the CSV.
@@ -141,6 +147,7 @@ static class Harness
         var csvPath = Path.Combine(Path.GetDirectoryName(Path.GetFullPath(reportPathForDumps)),
             Path.GetFileNameWithoutExtension(reportPathForDumps) + "-params.csv");
         int tested = 0, gcsFail = 0, limited = 0, skipped = 0, reLimited = 0;
+        var defects = new List<string>();
         using (var csv = new StreamWriter(csvPath, false) { AutoFlush = true })
         {
             csv.WriteLine("name,type,original,sent,aircraft_kept,cache_matches_aircraft,restored_ok,note");
@@ -205,8 +212,8 @@ static class Harness
                     note = "firmware changed the value after acknowledging it; " + note;
                     reLimited++;
                 }
-                bool gcsDefect = note.Contains("error");
-                if (gcsDefect) gcsFail++;
+                bool gcsDefect = note.Contains("error") || !restoredOk || !cacheOk;
+                if (gcsDefect) { gcsFail++; if (defects.Count < 10) defects.Add($"{name}: {note.Trim()}"); }
                 consecutiveErrors = note.Contains("error") ? consecutiveErrors + 1 : 0;
                 if (consecutiveErrors >= 3)
                 {
@@ -214,11 +221,10 @@ static class Harness
                     Check(false, "param sweep: aircraft still answering", "aborted after " + name);
                     break;
                 }
-                // a failed restore is only a GCS defect if the aircraft accepted the original value before
                 csv.WriteLine($"{name},{type},{orig},{test},{kept},{cacheOk},{restoredOk},\"{note.Trim()}\"");
             }
         }
-        Check(gcsFail == 0, "param sweep: GCS handled every parameter", $"{tested} tested, {gcsFail} GCS failures, {skipped} skipped");
+        Check(gcsFail == 0, "param sweep: GCS handled every parameter", $"{tested} tested, {gcsFail} GCS failures, {skipped} skipped; first: {string.Join(" | ", defects)}");
         Info("param sweep: firmware limits", $"{limited} parameters kept a different value than sent (see {Path.GetFileName(csvPath)})");
         if (reLimited > 0) Info("param sweep: re-limited after acknowledgement", $"{reLimited} parameters");
     }
@@ -388,17 +394,53 @@ static class Harness
             $"{setCurFails} + {cmdIntFails} lost");
     }
 
-    static void Shot(string file)
+    // Saves a picture of the app window. Returns null when the app was the foreground window, otherwise what was
+    // on top (the picture is then taken with PrintWindow so it still shows the app).
+    static string Shot(string file)
     {
+        var mf = MainV2.instance;
+        if (mf.WindowState == System.Windows.Forms.FormWindowState.Minimized)
+            mf.WindowState = System.Windows.Forms.FormWindowState.Maximized;
+        mf.Activate();
+        mf.BringToFront();
+        SetForegroundWindow(mf.Handle);
+        var settle = DateTime.Now.AddMilliseconds(400);
+        while (DateTime.Now < settle) { System.Windows.Forms.Application.DoEvents(); System.Threading.Thread.Sleep(20); }
+
+        var top = GetForegroundWindow();
+        uint pid;
+        GetWindowThreadProcessId(top, out pid);
+        bool ours = pid == (uint)System.Diagnostics.Process.GetCurrentProcess().Id;
+        var title = new System.Text.StringBuilder(256);
+        GetWindowText(top, title, title.Capacity);
+
         var hdc = GetDC(IntPtr.Zero);
         var screen = new System.Drawing.Rectangle(0, 0, GetDeviceCaps(hdc, 118), GetDeviceCaps(hdc, 117));
         ReleaseDC(IntPtr.Zero, hdc);
-        using (var bmp = new System.Drawing.Bitmap(screen.Width, screen.Height))
+        // in a DPI-unaware process form bounds are scaled, CopyFromScreen is not
+        double scale = (double)screen.Width / System.Windows.Forms.Screen.PrimaryScreen.Bounds.Width;
+        var b = mf.Bounds;
+        var area = System.Drawing.Rectangle.Intersect(screen, new System.Drawing.Rectangle(
+            (int)(b.X * scale), (int)(b.Y * scale), (int)(b.Width * scale), (int)(b.Height * scale)));
+        if (ours && area.Width > 0 && area.Height > 0)
+        {
+            using (var bmp = new System.Drawing.Bitmap(area.Width, area.Height))
+            using (var g = System.Drawing.Graphics.FromImage(bmp))
+            {
+                g.CopyFromScreen(area.Location, System.Drawing.Point.Empty, area.Size);
+                bmp.Save(file);
+            }
+            return null;
+        }
+        using (var bmp = new System.Drawing.Bitmap(mf.Width, mf.Height))
         using (var g = System.Drawing.Graphics.FromImage(bmp))
         {
-            g.CopyFromScreen(screen.Location, System.Drawing.Point.Empty, screen.Size);
+            var dc = g.GetHdc();
+            PrintWindow(mf.Handle, dc, 2);
+            g.ReleaseHdc(dc);
             bmp.Save(file);
         }
+        return $"app was not the foreground window; on top: \"{title}\"";
     }
 
     static IEnumerable<System.Windows.Forms.Control> AllControls(System.Windows.Forms.Control c)
@@ -448,9 +490,10 @@ static class Harness
                     bsv.ActivatePage(page);
                     await Task.Delay(2500);
                     var safe = new string(title.Select(ch => char.IsLetterOrDigit(ch) ? ch : '_').ToArray());
-                    Shot(Path.Combine(shotDir, $"{label}-{idx:00}-{safe}.png"));
+                    var shotProblem = Shot(Path.Combine(shotDir, $"{label}-{idx:00}-{safe}.png"));
                     opened++;
                     Check(failures == failuresBefore, $"page opens cleanly: {label} / {title}");
+                    Check(shotProblem == null, $"page shown in front: {label} / {title}", shotProblem ?? "");
                 }
                 catch (Exception ex)
                 {
@@ -787,9 +830,11 @@ static class Harness
             param_type = (byte) MAVLink.MAV_PARAM_TYPE.REAL32,
             param_id = System.Text.Encoding.ASCII.GetBytes(name.PadRight(16, '\0'))
         };
-        port.sendPacket(raw, sid, cid);
+        bool rawSent = false;
+        try { port.sendPacket(raw, sid, cid); rawSent = true; } catch (Exception ex) { Log("raw write not sent: " + ex.Message); }
         await Task.Delay(2000);
-        Check(Math.Abs(port.GetParam(sid, cid, name) - orig) < 1e-3, "lock: aircraft refuses a write that skips the app");
+        Check(rawSent && Math.Abs(port.GetParam(sid, cid, name) - orig) < 1e-3, "lock: aircraft refuses a write that skips the app",
+            rawSent ? "" : "raw packet was not sent");
 
         Check(!SarusLock.TryUnlock("not the password"), "lock: wrong password refused");
 
@@ -994,7 +1039,9 @@ static class Harness
     static bool Unlock()
     {
         SarusLockUI.UnlockAllAircraft();
-        return true;
+        var port = MainV2.comPort;
+        var flags = port.SarusLockStatusAsync((uint)port.sysidcurrent, (byte)port.compidcurrent).Result;
+        return flags != null && (flags.Value & SarusLock.FLAG_UNLOCKED_BY_YOU) != 0;
     }
 
     static async Task Run()
@@ -1265,6 +1312,9 @@ static class Harness
         var menus = new (string name, string item)[] {
             ("1-data", "MenuFlightData"), ("2-plan", "MenuFlightPlanner"), ("3-setup", "MenuInitConfig"),
             ("4-config", "MenuConfigTune"), ("5-simulation", "MenuSimulation"), ("6-help", "MenuHelp") };
+        var screenNames = new Dictionary<string, string> {
+            ["MenuFlightData"] = "FlightData", ["MenuFlightPlanner"] = "FlightPlanner", ["MenuInitConfig"] = "HWConfig",
+            ["MenuConfigTune"] = "SWConfig", ["MenuSimulation"] = "Simulation", ["MenuHelp"] = "Help" };
         var mf = MainV2.instance;
         mf.WindowState = System.Windows.Forms.FormWindowState.Maximized;
         mf.TopMost = true;
@@ -1287,18 +1337,11 @@ static class Harness
                     var button = (System.Windows.Forms.ToolStripItem)field.GetValue(mf);
                     button.PerformClick();
                     await Task.Delay(3000);
-                    // capture what is on screen (includes GL/map surfaces that DrawToBitmap misses)
-                    // Physical screen size: in a DPI-unaware process Screen bounds are scaled, CopyFromScreen is not.
-                    var hdc = GetDC(IntPtr.Zero);
-                    var screen = new System.Drawing.Rectangle(0, 0, GetDeviceCaps(hdc, 118), GetDeviceCaps(hdc, 117));
-                    ReleaseDC(IntPtr.Zero, hdc);
-                    using (var bmp = new System.Drawing.Bitmap(screen.Width, screen.Height))
-                    using (var g = System.Drawing.Graphics.FromImage(bmp))
-                    {
-                        g.CopyFromScreen(screen.Location, System.Drawing.Point.Empty, screen.Size);
-                        bmp.Save(Path.Combine(shotDir, (theme == "" ? "" : Path.GetFileNameWithoutExtension(theme) + "-") + name + ".png"));
-                    }
-                    Check(true, "screen opens " + theme + " " + name);
+                    // capture the app window as it is drawn (includes GL/map surfaces that DrawToBitmap misses)
+                    var shotProblem = Shot(Path.Combine(shotDir, (theme == "" ? "" : Path.GetFileNameWithoutExtension(theme) + "-") + name + ".png"));
+                    string showing = MainV2.View?.current?.Name ?? "";
+                    Check(shotProblem == null && showing == screenNames[item], "screen opens " + theme + " " + name,
+                        shotProblem ?? ("showing " + showing));
                 }
                 catch (Exception ex)
                 {

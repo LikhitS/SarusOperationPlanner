@@ -6295,6 +6295,14 @@ Column 1: Field type (RALLY is the only one at the moment -- may have RALLY_LAND
                 ((ProgressReporterDialogue) sender).UpdateProgressAndStatus(95, "Setting params");
 
                 // use brute force, for all three possible params
+                // Sarus: these are parameters, so the admin password applies; the mission itself is already written
+                if (!port.SarusAllowChange(port.MAV.sysid, port.MAV.compid, "waypoint and loiter radius"))
+                {
+                    MainV2.instance?.BeginInvoke((Action) (() => CustomMessageBox.Show(
+                        "The mission was written. The waypoint and loiter radius were not changed, because changing " +
+                        "parameters needs the Sarus admin password.", "Write mission")));
+                    return;
+                }
 
                 // m
                 port.setParam("WP_RADIUS", float.Parse(TXT_WPRad.Text) / CurrentState.multiplierdist);

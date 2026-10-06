@@ -55,6 +55,9 @@ namespace MissionPlanner.Controls
             }
 
             value = InputBox.value;
+            // a password is handed to the caller only, never left in this shared field
+            if (password)
+                InputBox.value = "";
 
             return answer;
         }
@@ -177,7 +180,8 @@ namespace MissionPlanner.Controls
 
             if (dialogResult == DialogResult.OK)
             {
-                if (textBox.AutoCompleteCustomSource != null)
+                // never remember a password: the autocomplete list is saved to config.xml in plain text
+                if (!password && textBox.AutoCompleteCustomSource != null)
                 {
                     textBox.AutoCompleteCustomSource.Add(textBox.Text);
                     Settings.Instance.SetList("InputBox" + title.CleanString() + promptText.CleanString(), textBox.AutoCompleteCustomSource.OfType<string>());

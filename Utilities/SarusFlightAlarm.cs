@@ -50,6 +50,11 @@ namespace MissionPlanner.Utilities
         private static Form open;
         private static SoundPlayer siren;
 
+        // mission item commands fetched from the aircraft when the app has no copy of the mission; null while
+        // a fetch is under way. Cleared on the ground, since the mission may change between flights.
+        private static readonly System.Collections.Concurrent.ConcurrentDictionary<(uint, byte, int), ushort?> fetched =
+            new System.Collections.Concurrent.ConcurrentDictionary<(uint, byte, int), ushort?>();
+
         /// <summary>for tests: raised with the alarm text when the alarm sounds</summary>
         public static event Action<string> Raised;
 
@@ -92,9 +97,13 @@ namespace MissionPlanner.Utilities
             if (open != null || port?.BaseStream == null || !port.BaseStream.IsOpen)
                 return;
             var cs = port.MAV.cs;
+            uint sysid = port.MAV.sysid;
+            byte compid = port.MAV.compid;
             if (!cs.armed || !InMission(cs.mode))
             {
                 Reset();
+                if (!cs.armed)
+                    fetched.Clear();
                 return;
             }
 
@@ -102,8 +111,15 @@ namespace MissionPlanner.Utilities
             if (!env.AlarmEnabled || DateTime.Now < quietUntil)
                 return;
 
-            // the mission item being flown, when the app knows the mission
-            if (port.MAV.wps.TryGetValue((int) cs.wpno, out var item) && transitItems.Contains(item.command))
+            // the mission item being flown; asked from the aircraft when the app has no copy of the mission
+            ushort? command;
+            if (port.MAV.wps.TryGetValue((int) cs.wpno, out var item))
+                command = item.command;
+            else
+                command = FetchedCommand(port, sysid, compid, (int) cs.wpno);
+            if (command == null)
+                return; // not known yet: judge nothing rather than judge a landing as cruise
+            if (transitItems.Contains(command.Value))
             {
                 Reset();
                 return;
@@ -117,12 +133,13 @@ namespace MissionPlanner.Utilities
                     minAirspeed = port.MAV.param[n].Value;
                     break;
                 }
-            if (cs.airspeed > minAirspeed * 0.9)
+            double airspeed = cs.airspeed / (CurrentState.multiplierspeed == 0 ? 1 : CurrentState.multiplierspeed); // m/s
+            if (airspeed > minAirspeed * 0.9)
             {
                 wingborne = true;
                 slowSince = DateTime.MaxValue;
             }
-            else if (cs.airspeed < 3)
+            else if (airspeed < 3)
             {
                 if (slowSince == DateTime.MaxValue)
                     slowSince = DateTime.Now;
@@ -144,7 +161,29 @@ namespace MissionPlanner.Utilities
                 hits.Add(Describe(trk, trkErr, env));
 
             if (hits.Count > 0)
-                Show(form, hits);
+                Show(form, hits, port, sysid, compid, kind);
+        }
+
+        private static ushort? FetchedCommand(MAVLinkInterface port, uint sysid, byte compid, int seq)
+        {
+            var key = (sysid, compid, seq);
+            if (fetched.TryGetValue(key, out var command))
+                return command;
+            fetched[key] = null;
+            System.Threading.Tasks.Task.Run(() =>
+            {
+                try
+                {
+                    fetched[key] = port.getWP(sysid, compid, (ushort) seq).id;
+                }
+                catch (Exception ex)
+                {
+                    // unknown item: judge it like any other rather than never alarm
+                    log.Warn("Sarus flight alarm: mission item " + seq + " not read: " + ex.Message);
+                    fetched[key] = 0;
+                }
+            });
+            return null;
         }
 
         /// <summary>
@@ -180,45 +219,52 @@ namespace MissionPlanner.Utilities
             return $"The {w.What} has been {error:0.#} {w.Unit} away from its target for {secs} s and is not closing.";
         }
 
-        private static void Show(MainV2 owner, List<string> hits)
+        private static void Show(MainV2 owner, List<string> hits, MAVLinkInterface port, uint sysid, byte compid,
+            SarusEnvelope.Kind kind)
         {
-            string text = string.Join("\n", hits);
+            // the aircraft is named, and the answer goes to it even if another aircraft is selected meanwhile
+            string text = "Aircraft " + sysid + ": " + string.Join("\n", hits);
             log.Warn("Sarus flight alarm: " + text.Replace("\n", " "));
             Raised?.Invoke(text);
             StartSiren();
 
             int left = AnswerSeconds;
-            var f = new Form
+            var headFont = new Font("Segoe UI Semibold", 13f);
+            var bodyFont = new Font("Segoe UI", 10.5f);
+            var countFont = new Font("Segoe UI Semibold", 10.5f);
+            var buttonFont = new Font("Segoe UI Semibold", 11f);
+            // shown without an owner, so it stays on screen when the main window is minimised; listed in the taskbar
+            // so it can always be found
+            var f = new AlarmForm
             {
-                Text = "Sarus flight alarm", FormBorderStyle = FormBorderStyle.FixedDialog, StartPosition = FormStartPosition.CenterParent,
-                TopMost = true, ShowInTaskbar = false, MinimizeBox = false, MaximizeBox = false, ControlBox = false,
-                ClientSize = new Size(560, 250), BackColor = Color.FromArgb(0x1C, 0x22, 0x29), ForeColor = Color.White,
-                KeyPreview = true
+                Text = "Sarus flight alarm", FormBorderStyle = FormBorderStyle.FixedDialog, StartPosition = FormStartPosition.Manual,
+                TopMost = true, ShowInTaskbar = true, MinimizeBox = false, MaximizeBox = false, ControlBox = false,
+                BackColor = Color.FromArgb(0x1C, 0x22, 0x29), ForeColor = Color.White, KeyPreview = true
             };
             var head = new Label
             {
                 Text = "The aircraft is not achieving its set parameters", Dock = DockStyle.Top, Height = 40,
-                Font = new Font("Segoe UI Semibold", 13f), ForeColor = Color.White, BackColor = SarusLimitsUI.AlertRed,
+                Font = headFont, ForeColor = Color.White, BackColor = SarusLimitsUI.AlertRed,
                 TextAlign = ContentAlignment.MiddleCenter
             };
+            // every alarm line is shown in full: the label grows to fit, and the rest of the dialog moves down
             var body = new Label
             {
-                Text = text, Location = new Point(20, 52), Size = new Size(520, 70), Font = new Font("Segoe UI", 10.5f),
+                Text = text, Location = new Point(20, 52), AutoSize = true, MaximumSize = new Size(520, 0), Font = bodyFont,
                 AccessibleRole = AccessibleRole.Alert
             };
-            var count = new Label
-            {
-                Location = new Point(20, 126), Size = new Size(520, 24), Font = new Font("Segoe UI Semibold", 10.5f)
-            };
+            var count = new Label { AutoSize = true, MaximumSize = new Size(520, 0), Font = countFont };
             void SetCount() => count.Text = "With no answer the mission continues as planned in " + left + " s.";
             SetCount();
 
+            // no button takes keyboard focus and none is the default or cancel button, so a key pressed while the
+            // pilot is busy elsewhere (Enter, Escape, Space) can never answer the alarm; only a click does
             Button Make(string label, int x)
             {
                 var b = new Button
                 {
-                    Text = label, Location = new Point(x, 170), Size = new Size(160, 48), FlatStyle = FlatStyle.Flat,
-                    Font = new Font("Segoe UI Semibold", 11f), ForeColor = Color.White, BackColor = Color.FromArgb(0x2B, 0x34, 0x3E)
+                    Text = label, Location = new Point(x, 0), Size = new Size(160, 48), FlatStyle = FlatStyle.Flat,
+                    Font = buttonFont, ForeColor = Color.White, BackColor = Color.FromArgb(0x2B, 0x34, 0x3E), TabStop = false
                 };
                 b.FlatAppearance.BorderColor = Color.FromArgb(0x8A, 0x96, 0xA3);
                 return b;
@@ -227,8 +273,23 @@ namespace MissionPlanner.Utilities
             var hold = Make("Hold position", 200);
             var home = Make("Return home", 380);
             f.Controls.AddRange(new Control[] { head, body, count, cont, hold, home });
-            f.AcceptButton = cont;
-            f.CancelButton = cont;
+            f.KeyDown += (s, e) => e.SuppressKeyPress = e.Handled = true;
+
+            int y = body.Bottom + 12;
+            count.Location = new Point(20, y);
+            y = count.Bottom + 18;
+            foreach (var b in new[] { cont, hold, home })
+                b.Top = y;
+            f.ClientSize = new Size(560, y + 48 + 20);
+
+            // centred on the screen the app is on, whether the app is minimised or not
+            var area = owner != null && !owner.IsDisposed && owner.WindowState != FormWindowState.Minimized
+                ? owner.Bounds
+                : Screen.FromControl(owner ?? (Control) f).WorkingArea;
+            var screen = Screen.FromRectangle(area).WorkingArea;
+            f.Location = new Point(
+                Math.Max(screen.Left, Math.Min(screen.Right - f.Width, area.Left + (area.Width - f.Width) / 2)),
+                Math.Max(screen.Top, Math.Min(screen.Bottom - f.Height, area.Top + (area.Height - f.Height) / 2)));
 
             var tick = new Timer { Interval = 1000 };
             bool done = false;
@@ -240,18 +301,10 @@ namespace MissionPlanner.Utilities
                 tick.Stop();
                 StopSiren();
                 log.Warn("Sarus flight alarm answer: " + choice);
-                try
-                {
-                    if (choice == "hold")
-                        SetMode(HoldMode());
-                    else if (choice == "return")
-                        SetMode("RTL");
-                }
-                catch (Exception ex)
-                {
-                    log.Error(ex);
-                    CustomMessageBox.Show("The mode change failed: " + ex.Message, "Sarus flight alarm");
-                }
+                if (choice == "hold")
+                    SetMode(port, sysid, compid, HoldMode(port.MAVlist[sysid, compid].cs, kind));
+                else if (choice == "return")
+                    SetMode(port, sysid, compid, "RTL");
                 if (choice.StartsWith("continue"))
                     quietUntil = DateTime.Now.AddSeconds(QuietAfterContinueSeconds);
                 Reset();
@@ -268,23 +321,48 @@ namespace MissionPlanner.Utilities
                 if (left <= 0)
                     Finish("continue (no answer)");
             };
+            // Alt+F4 must not close it unanswered; Windows shutting down or the app exiting may
+            f.FormClosing += (s, e) =>
+            {
+                if (!done && e.CloseReason == CloseReason.UserClosing)
+                    e.Cancel = true;
+            };
             f.FormClosed += (s, e) =>
             {
                 tick.Dispose();
                 StopSiren();
                 open = null;
+                headFont.Dispose();
+                bodyFont.Dispose();
+                countFont.Dispose();
+                buttonFont.Dispose();
             };
 
             open = f;
             tick.Start();
-            f.Show(owner);
-            f.Activate();
+            // shown without taking focus from whatever the pilot is doing
+            f.Show();
         }
 
-        private static string HoldMode()
+        // a top-most window that appears without taking keyboard focus
+        private class AlarmForm : Form
         {
-            var cs = MainV2.comPort.MAV.cs;
-            switch (SarusLimitsUI.KindForCurrent())
+            protected override bool ShowWithoutActivation => true;
+
+            protected override CreateParams CreateParams
+            {
+                get
+                {
+                    var cp = base.CreateParams;
+                    cp.ExStyle |= 0x08000000 | 0x00000008; // WS_EX_NOACTIVATE, WS_EX_TOPMOST
+                    return cp;
+                }
+            }
+        }
+
+        private static string HoldMode(CurrentState cs, SarusEnvelope.Kind kind)
+        {
+            switch (kind)
             {
                 case SarusEnvelope.Kind.QuadPlane:
                     return cs.vtol_state == 3 ? "QLOITER" : "LOITER"; // 3 = hovering
@@ -295,10 +373,31 @@ namespace MissionPlanner.Utilities
             }
         }
 
-        private static void SetMode(string mode)
+        // asks for the mode with an acknowledgement, off the UI thread, and tells the pilot if the aircraft refuses
+        private static void SetMode(MAVLinkInterface port, uint sysid, byte compid, string mode)
         {
-            var port = MainV2.comPort;
-            port.setMode(port.MAV.sysid, port.MAV.compid, mode);
+            System.Threading.Tasks.Task.Run(() =>
+            {
+                string problem = null;
+                try
+                {
+                    var req = new MAVLink.mavlink_set_mode_t();
+                    if (!port.translateMode(sysid, compid, mode, ref req))
+                        problem = "This aircraft has no " + mode + " mode.";
+                    else if (!port.doCommand(sysid, compid, MAVLink.MAV_CMD.DO_SET_MODE, req.base_mode, req.custom_mode,
+                                 0, 0, 0, 0, 0, true))
+                        problem = "The aircraft did not accept " + mode + ".";
+                }
+                catch (Exception ex)
+                {
+                    log.Error(ex);
+                    problem = "The change to " + mode + " failed: " + ex.Message;
+                }
+                log.Warn("Sarus flight alarm: aircraft " + sysid + " " + mode + " -> " + (problem ?? "accepted"));
+                if (problem != null)
+                    MainV2.instance?.BeginInvoke((Action) (() => CustomMessageBox.Show(
+                        "Aircraft " + sysid + ": " + problem + " Take control with the transmitter.", "Sarus flight alarm")));
+            });
         }
 
         private static void StartSiren()

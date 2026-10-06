@@ -217,6 +217,10 @@ namespace MissionPlanner.GCSViews.ConfigurationView
 
                 if (MainV2.comPort.BaseStream.IsOpen)
                 {
+                    // Sarus: SLCAN setup writes parameters (one of them blind) and then allows node changes
+                    if (!MainV2.comPort.SarusAllowChange(MainV2.comPort.sysidcurrent, (byte)MainV2.comPort.compidcurrent,
+                            "DroneCAN setup"))
+                        return;
                     var cport = MainV2.comPort.MAV.param["CAN_SLCAN_CPORT"].Value;
                     MainV2.comPort.setParam(MainV2.comPort.sysidcurrent, (byte)MainV2.comPort.compidcurrent,
                         "CAN_SLCAN_CPORT", canport, true);
