@@ -44,6 +44,9 @@ jobs:
           Get-ChildItem "$src\plugins" | ForEach-Object { if (Test-Path "$src\$($_.Name)" -PathType Leaf) { Remove-Item $_.FullName } }
           robocopy $src stage\SarusOperationPlanner /E /XF config.xml *.tlog *.rlog /XD logs gmapcache srtm /NFL /NDL /NJH /NJS
           if ($LASTEXITCODE -ge 8) { exit $LASTEXITCODE }
+          # Altitude Angel is not part of Sarus: no download, installer or update may ever contain it
+          $aa = Get-ChildItem stage\SarusOperationPlanner -Recurse -Filter "AltitudeAngel*"
+          if ($aa) { $aa.FullName; throw "Altitude Angel files in the package" }
           exit 0
 
       - name: Update package (zip, checksums, version)
@@ -121,6 +124,9 @@ jobs:
         # must finish on its own: Sarus runs DPInst quietly in silent installs
         timeout-minutes: 15
         run: |
+          # a user who once answered Windows' own prompt already has a rule named after the program; the installer
+          # must add its own rule anyway (WiX updates a same-named rule instead, which hid the rule on a real PC)
+          New-NetFirewallRule -DisplayName 'Sarus Operation Planner' -Direction Inbound -Action Allow -Profile Public -Protocol TCP -Program "${env:ProgramFiles(x86)}\Sarus Operation Planner\MissionPlanner.exe" | Out-Null
           $msi = (Get-ChildItem out -Filter *.msi | Select-Object -First 1).FullName
           $p = Start-Process msiexec -ArgumentList '/i',"`"$msi`"",'/qn','/norestart','/l*v','sarus-install.log' -Wait -PassThru
           "Sarus install exit $($p.ExitCode)"
@@ -150,7 +156,8 @@ jobs:
           # the installer allows the program on every network type, so Windows never shows the firewall prompt
           $fw = Get-NetFirewallApplicationFilter | Where-Object Program -eq $exe | Get-NetFirewallRule
           $fw | Format-Table DisplayName, Direction, Action, Profile, Enabled -AutoSize | Out-String | Write-Host
-          if (-not ($fw | Where-Object { $_.Action -eq 'Allow' -and $_.Direction -eq 'Inbound' -and $_.Enabled -eq 'True' -and $_.Profile -eq 'Any' })) { throw "firewall rule for all networks missing" }
+          if (-not ($fw | Where-Object { $_.DisplayName -eq 'Sarus Operation Planner (all networks)' -and $_.Action -eq 'Allow' -and $_.Direction -eq 'Inbound' -and $_.Enabled -eq 'True' -and $_.Profile -eq 'Any' })) { throw "firewall rule for all networks missing" }
+          if (-not ($fw | Where-Object { $_.DisplayName -eq 'Sarus Operation Planner' -and $_.Profile -eq 'Public' })) { throw "the user's own rule was changed" }
 
       - name: Start Sarus and keep it running
         shell: pwsh
@@ -173,7 +180,9 @@ jobs:
             Where-Object DisplayName -eq 'Sarus Operation Planner').PSChildName
           $p = Start-Process msiexec -ArgumentList '/x',$code,'/qn','/norestart' -Wait -PassThru
           $exe = "${env:ProgramFiles(x86)}\Sarus Operation Planner\MissionPlanner.exe"
-          if (Get-NetFirewallApplicationFilter | Where-Object Program -eq $exe) { throw "firewall rule left behind after uninstall" }
+          $left = Get-NetFirewallApplicationFilter | Where-Object Program -eq $exe | Get-NetFirewallRule
+          if ($left | Where-Object DisplayName -eq 'Sarus Operation Planner (all networks)') { throw "installer's firewall rule left behind after uninstall" }
+          if (-not ($left | Where-Object DisplayName -eq 'Sarus Operation Planner')) { throw "uninstall removed the user's own firewall rule" }
           "Sarus uninstall exit $($p.ExitCode)"
           if (Test-Path "${env:ProgramFiles(x86)}\Sarus Operation Planner\MissionPlanner.exe") { throw "Sarus files left behind" }
           if (-not (Test-Path "${env:ProgramFiles(x86)}\Mission Planner\MissionPlanner.exe")) { throw "Uninstalling Sarus removed Mission Planner" }

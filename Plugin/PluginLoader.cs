@@ -113,6 +113,14 @@ namespace MissionPlanner.Plugin
                 return;
             }
 
+            // Sarus: Altitude Angel is not part of Sarus Operation Planner. Never load it, even if its files are
+            // left over from an older copy or copied in by hand.
+            if (Path.GetFileName(file).StartsWith("AltitudeAngel", StringComparison.OrdinalIgnoreCase))
+            {
+                log.InfoFormat("Plugin {0} is not used in Sarus Operation Planner; skipped", Path.GetFileName(file));
+                return;
+            }
+
             // file exists in the install directory, so skip trying to load it as a plugin
             if (File.Exists(file) && File.Exists(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) +
                                                  Path.DirectorySeparatorChar + Path.GetFileName(file)))
