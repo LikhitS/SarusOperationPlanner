@@ -1,11 +1,12 @@
+<!-- lint-allow: unlock -->
 <!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>Sarus Operation Planner 1.0.0 - Project Report</title>
+<title>Sarus Operation Planner 1.1.0 - Project Report</title>
 <link rel="stylesheet" href="sarus-print.css">
 <style>@page { @top-left { content: "Sarus Operation Planner · Project Report"; font: 600 8pt "Barlow Semi Condensed", sans-serif; letter-spacing: .08em; text-transform: uppercase; color: #566472; }
- @bottom-left { content: "Version 1.0.0 · October 2026 · Internal"; font: 8pt "Source Sans 3", sans-serif; color: #566472; } }</style>
+ @bottom-left { content: "Version 1.1.0 · October 2026 · Internal"; font: 8pt "Source Sans 3", sans-serif; color: #566472; } }</style>
 </head>
 <body>
 
@@ -16,14 +17,14 @@
   </div>
   <div class="mid">
     <div class="kind">Project report</div>
-    <h1>Sarus Operation Planner 1.0.0</h1>
+    <h1>Sarus Operation Planner 1.1.0</h1>
     <p class="sub">What we built, how we built it, what is different from ArduPilot Mission Planner, how we tested it, and what it gives Sarus.</p>
     <div class="rule"></div>
   </div>
   <dl class="meta">
     <div><dt>Product</dt><dd>Ground control station</dd></div>
-    <div><dt>Version</dt><dd>1.0.0 (Windows)</dd></div>
-    <div><dt>Date</dt><dd>4 October 2026</dd></div>
+    <div><dt>Version</dt><dd>1.1.0 (Windows)</dd></div>
+    <div><dt>Date</dt><dd>6 October 2026</dd></div>
     <div><dt>Status</dt><dd>Release candidate</dd></div>
   </dl>
 </div>
@@ -31,8 +32,9 @@
 <section class="chapter" id="s1">
   <h2><span class="n">01</span>Summary</h2>
   <p class="lead">Sarus Operation Planner is the Windows program our pilots use to set up, plan, fly and review ArduPilot aircraft. We built it from ArduPilot Mission Planner 1.3.83 and left every screen, button, feature and keyboard shortcut where Mission Planner has it.</p>
-  <p>Four things changed. The program now carries the Sarus name, logo, colours and installer, and it sits next to an existing Mission Planner installation without touching it. Parameter editing no longer stands in the way of tuning: a value outside ArduPilot's recommended range turns amber instead of being refused, and after each write the program asks the aircraft what it actually kept. We also found a fault, inherited from Mission Planner, that let replies from the aircraft go missing when two requests were waiting at once. That is fixed. Finally, every change is now compiled, tested, packaged and test-installed by GitHub's cloud machines, with no manual steps.</p>
-  <p>Alongside the program, Sarus now has its own firmware line: an ArduPilot 4.7.1 fork that identifies itself as Sarus and is built automatically for seven flight-controller families.</p>
+  <p>Four things changed. The program now carries the Sarus name, logo, colours and installer, and it sits next to an existing Mission Planner installation without touching it. Parameter editing no longer stands in the way of tuning: values are taken exactly as typed, and after each write the program asks the aircraft what it actually kept. We also found a fault, inherited from Mission Planner, that let replies from the aircraft go missing when two requests were waiting at once. That is fixed. Finally, every change is now compiled, tested, packaged and test-installed by GitHub's cloud machines, with no manual steps.</p>
+  <p>Alongside the program, Sarus now has its own firmware, built automatically for seven flight-controller families on two lines, ArduPilot 4.7.1 and 4.6.3.</p>
+  <p>Version 1.1.0 adds what the owner asked for next. The aircraft's setup can be changed only with the owner's admin password, a rule enforced by the program and by the Sarus firmware itself, while flying stays open to everyone. The program takes only the owner's values and offers no suggestions of its own. Values beyond what the airframe can physically do blink red, and a siren asks the pilot to continue, hold or return when a mission is not going as set (5.5 to 5.7).</p>
   <div class="kpis">
     <div class="kpi"><b>0</b><span>changes to Mission Planner's shortcuts, screens, menus and controls</span></div>
     <div class="kpi"><b>0 / 3,298</b><span>aircraft replies lost under stress after the fix (before: 13 of 105)</span></div>
@@ -92,10 +94,14 @@
   <table>
     <thead><tr><th>Requirement</th><th>How it was met</th></tr></thead>
     <tbody>
-      <tr><td class="k">Exactly Mission Planner's features</td><td>No button, screen, feature or shortcut was removed, moved or rebound. A scan of the source compares every menu, screen, control and shortcut with stock Mission Planner; it finds no differences apart from three intended name changes.</td></tr>
-      <tr><td class="k">Sarus look</td><td>Sarus Dark (default) and Sarus Light themes, redrawn menu icons, the crane logo in the top-right corner (it opens sarusaerospace.in), splash screen, program icon and installer. HUD and map colours stay as they were, so pilots read them the same way.</td></tr>
+      <tr><td class="k">Exactly Mission Planner's features</td><td>No shortcut was rebound and no screen moved. Two features that write suggested values, Load Presaved and Initial Tune Parameter, were removed in 1.1.0 at the owner's request; everything else is in place. A scan of the source compares every menu, screen, control and shortcut with stock Mission Planner; it finds no differences apart from three intended name changes.</td></tr>
+      <tr><td class="k">Sarus look</td><td>Sarus Dark (default), Sarus Light and the optional Sarus Glass themes, redrawn menu icons, the crane logo with "Powered by Sarus Aerospace" in the top-right corner (it opens sarusaerospace.in), splash screen, program icon and installer. HUD and map colours stay as they were, so pilots read them the same way.</td></tr>
       <tr><td class="k">New firmware visible at once</td><td>Install Firmware reads ArduPilot's live firmware list, so a new ArduPilot release shows up the day it is published. The Sarus firmware list is read the same way, and Sarus builds appear next to ArduPilot's.</td></tr>
-      <tr><td class="k">Tune freely, still see errors</td><td>Out-of-range values are accepted and marked amber. Read-only parameters can be changed after a confirmation. Every written value is checked against what the aircraft stored.</td></tr>
+      <tr><td class="k">Tune freely, still see errors</td><td>Values are accepted as typed. Read-only parameters can be changed after a confirmation. Every written value is checked against what the aircraft stored.</td></tr>
+      <tr><td class="k">A password lock nobody can get round</td><td>The owner's admin password unlocks setup changes in the program and, through a signed one-time code, on aircraft running Sarus firmware (5.5).</td></tr>
+      <tr><td class="k">Only the owner's values</td><td>No recommended ranges, clamping or suggested parameter sets; the owner's set can become the firmware's defaults (5.6).</td></tr>
+      <tr><td class="k">Alert beyond the airframe's physics</td><td>Airframe limits per flight controller; any parameter beyond them blinks red (5.6).</td></tr>
+      <tr><td class="k">Alarm when a mission is not going as set</td><td>Siren with continue, hold or return; with no answer the mission continues (5.7).</td></tr>
       <tr><td class="k">One setup file for any Windows 10 or 11 PC</td><td>A standard Windows installer, built in the cloud and installed as a test on fresh Windows Server 2022 and 2025 machines, which correspond to Windows 10 and 11.</td></tr>
       <tr><td class="k">No defects</td><td>Simulator flights for three vehicle types, parameter sweeps, every setup page, shortcuts, bad-link flights, a 4-hour endurance run and stress tests (chapter 6). Faults found in Mission Planner itself were fixed and are listed in chapter 5.</td></tr>
     </tbody>
@@ -156,7 +162,7 @@
   <p class="muted">USB drivers and their signing certificate, map providers, the parameter documentation source and every feature and shortcut were deliberately left as Mission Planner has them.</p>
 
   <h3>5.2 Parameter editing</h3>
-  <p>In Mission Planner, typing a value outside the recommended range brings up a Yes/No question for every such value, read-only parameters cannot be changed at all, and the table shows whatever was typed even if the aircraft rounded or limited it. Sarus handles all three differently. Out-of-range values are accepted without a question; the cell turns amber and its tooltip gives the recommended range. A read-only parameter can be changed after a clear warning. And once a write is done, the program reads every written value back from the aircraft. Anything the aircraft did not keep is listed in a "Values changed by aircraft" window, and the table shows the real value.</p>
+  <p>In Mission Planner, typing a value outside the recommended range brings up a Yes/No question for every such value, read-only parameters cannot be changed at all, and the table shows whatever was typed even if the aircraft rounded or limited it. Sarus handles all three differently. Out-of-range values are accepted without a question. In 1.0.0 the cell turned amber; since 1.1.0 the recommended range is not shown at all (5.6). A read-only parameter can be changed after a clear warning. And once a write is done, the program reads every written value back from the aircraft. Anything the aircraft did not keep is listed in a "Values changed by aircraft" window, and the table shows the real value.</p>
   <div class="callout"><strong class="t">Found during testing</strong>
     <p>Asked to set <code>Q_LOIT_ACC_MAX_M</code> to 9.81, the aircraft confirmed it and then ran at 5.66. Mission Planner would have shown 9.81. Sarus shows 5.66 and says so.</p>
   </div>
@@ -178,6 +184,20 @@
   <h3>5.4 Other Mission Planner faults we fixed</h3>
   <p>The update check showed an error whenever the update server had no file yet; it now reports quietly that there is no update. Plugins compiled by an older version were reused after an upgrade and then failed every second, so the plugin cache now includes the program's build identity. The updater used to download a whole release file just to learn its size, where reading the size header is enough. When a legacy rally-point request was lost, the retry went out as a fence request and could never succeed; it now sends the right message.</p>
   <p>The silent-install problem took longest to find. Mission Planner's installer starts a USB driver wizard that waits for a click. In a silent installation (<code>msiexec /qn</code>, as IT departments use) nobody can click, and the installation never ends. Stock Mission Planner hung there on both of our test machines. Sarus runs that driver step quietly when the installation is silent; normal installations are unchanged. In a silent install Windows adds only drivers whose publisher is already trusted, which keeps the same trust model as Mission Planner.</p>
+
+  <h3>5.5 Version 1.1.0: the parameter lock</h3>
+  <p>The owner asked for the aircraft's setup to be changeable only with a password the owner sets and nobody can get round, while anyone with the program can still fly. A lock inside the program alone cannot do that, because the program's source is public and other ground stations exist. So the lock sits in two places. Sarus Operation Planner refuses parameter writes, calibrations, parameter files, firmware installs and file writes until the admin password is typed. The firmware refuses the same changes from any ground station that has not unlocked it.</p>
+  <p>To unlock an aircraft, the program asks it for a one-time number and returns it signed with an Ed25519 key. That key is derived from the password with scrypt each time the password is typed, and it is never stored. The aircraft holds only the matching public keys, so reading them out of the firmware reveals nothing, and a recorded unlock cannot be replayed. An unlock belongs to one station on one link, survives into flight but can only be made on the ground, and ends on reboot, on a lock request or after ten seconds of silence once disarmed. The owner created the password and a spare on the owner's own PC; neither appears in any file, message or chat.</p>
+  <p>We chose this over MAVLink signing, the obvious alternative. With signing, a station without the key cannot talk to the aircraft at all, so people without the password could not fly either, which the owner did not want.</p>
+
+  <h3>5.6 Only the owner's values, and the airframe's limits</h3>
+  <p>The owner also asked that the aircraft take only the values the owner sets. On the program's side, the Full Parameter List no longer shows or flags ArduPilot's recommended ranges, its spin box no longer clamps to them, and the two features that wrote suggested values, Load Presaved and Initial Tune Parameter, were removed. These are the only Mission Planner features Sarus has removed, both on request.</p>
+  <p>On the firmware's side, we first measured where ArduPilot overrides a value. Of about 3,000 parameters written to the simulator, one is a genuine limit: loiter acceleration is capped at g·tan(lean angle), which is physics rather than policy. The rest are measured values and 8-bit storage. No limit was removed; the program shows the value the aircraft actually keeps instead. Sarus firmware can now also carry the owner's parameter set as its defaults, so a new board or a parameter reset starts from it.</p>
+  <p>To catch values the airframe cannot fly, a new page stores each airframe's physical limits (stall speed, maximum speed, climb and descent rates, bank, pitch and lean angles, turn radius). Any parameter beyond them blinks red in the parameter list and in a banner across the window. It understands the parameter names and units of both ArduPilot 4.6 and 4.7, which differ for many of these settings.</p>
+
+  <h3>5.7 The in-flight alarm, Sarus Glass and the second firmware line</h3>
+  <p>During a mission the program now compares the altitude, airspeed and track the aircraft is trying to hold with what it achieves. If one stays off beyond the set amount for the set time and is not closing, a siren sounds and the pilot chooses to continue, hold or return. Without an answer in fifteen seconds the mission continues. The first version sounded during a VTOL take-off, where the target airspeed is far above zero by design. The test flight caught it, and take-off, landing and return legs, and airspeed before wing-borne flight, are now left out.</p>
+  <p>Sarus Glass is a new, optional theme with a frosted menu bar, a slate window frame, card-style group boxes and softly raised buttons, kept restrained on purpose; the HUD and map are unchanged. The badge at the top right now reads "Powered by Sarus Aerospace". Finally, Sarus firmware gained a second line on ArduPilot 4.6.3 next to 4.7.1, with the same Sarus changes, and the program offers both.</p>
 </section>
 
 <section class="chapter" id="s6">
@@ -185,7 +205,10 @@
   <table>
     <thead><tr><th>Test</th><th>What was done</th><th>Result</th></tr></thead>
     <tbody>
-      <tr><td class="k">Feature parity</td><td>Scan of every menu, screen, control and keyboard shortcut, compared with stock Mission Planner</td><td class="good">No differences besides 3 intended renames</td></tr>
+      <tr><td class="k">Feature parity</td><td>Scan of every menu, screen, control and keyboard shortcut, compared with stock Mission Planner</td><td class="good">No differences besides 3 intended renames (1.0.0); 1.1.0 removes 2 suggestion features on request and adds 1 page</td></tr>
+      <tr><td class="k">1.1.0 regression</td><td>Parameter editor, QuadPlane, Copter and Rover missions, limits and alarm flight, poor link, shortcuts and stress, every page, every QuadPlane and Rover parameter, on Sarus-2 4.7.1</td><td class="good">16 of 16 steps</td></tr>
+      <tr><td class="k">Parameter lock</td><td>Firmware tests on both lines (refusals, wrong keys, replays, other stations, arming, silence, reboot); the program against the real firmware</td><td class="good">35 of 35 per line; 18 of 18</td></tr>
+      <tr><td class="k">In-flight alarm</td><td>QuadPlane mission, engine cut in cruise, on 4.7.1 and 4.6.3</td><td class="good">Silent through take-off; sounded after the cut; continue, no answer and hold all correct</td></tr>
       <tr><td class="k">Unit tests</td><td>Mission Planner's own test suite</td><td class="good">31 of 38, same as stock (7 known upstream failures)</td></tr>
       <tr><td class="k">QuadPlane flights</td><td>Connect, upload mission, arm, VTOL take-off, waypoints, VTOL landing; 42 checks per flight</td><td class="good">3 of 3 flights, 42 of 42 checks</td></tr>
       <tr><td class="k">Copter flight</td><td>Take-off, waypoints, return to launch</td><td class="good">Pass</td></tr>
@@ -218,8 +241,11 @@
     <tbody>
       <tr><td class="k">Real-hardware test</td><td>Bench and first flight with a Pixhawk QuadPlane, following the Field Test Checklist. Required before operational use.</td><td>Flight team</td></tr>
       <tr><td class="k">Code signing</td><td>Until the installer is signed, Windows warns "Windows protected your PC". Needs a D-U-N-S number, then an OV certificate with cloud signing; the credentials go into GitHub Secrets.</td><td>Management</td></tr>
-      <tr><td class="k">First app release</td><td>Push the tag <code>v1.0.0</code> once the field test has passed.</td><td>Management, engineering</td></tr>
-      <tr><td class="k">First firmware release</td><td>Done: <code>sarus-v4.7.1-S1</code> was released on 4 October 2026 after passing the simulator tests. Next is the same field test on Sarus firmware.</td><td>Engineering</td></tr>
+      <tr><td class="k">First app release</td><td>Push the tag <code>v1.1.0</code> once the field test has passed.</td><td>Management, engineering</td></tr>
+      <tr><td class="k">Password acceptance test</td><td>The owner unlocks a simulator built with the owner keys, using the real password and the spare (<code>tests\try-your-password.ps1</code>). Nobody else can run it.</td><td>Owner</td></tr>
+      <tr><td class="k">Owner's default parameters</td><td>Supply <code>plane.parm</code>, <code>copter.parm</code> and <code>rover.parm</code> with the values that differ from ArduPilot's; the firmware build embeds them.</td><td>Owner, flight team</td></tr>
+      <tr><td class="k">Secure bootloader</td><td>Only Sarus-signed firmware should run on Sarus boards, so the lock cannot be avoided by reflashing over USB.</td><td>Engineering</td></tr>
+      <tr><td class="k">Firmware releases</td><td><code>sarus-v4.7.1-S1</code> was released on 4 October 2026. Sarus-2 on both lines has passed its tests and is released once the owner's acceptance test is done. Then the field test on Sarus firmware.</td><td>Engineering</td></tr>
       <tr><td class="k">Legal</td><td>Lawyer review of terms of use, privacy notice and safety disclaimer; trademark search; DGCA obligations under the Drone Rules 2021.</td><td>Management</td></tr>
       <tr><td class="k">High-resolution screens</td><td>Text is slightly soft above 100% Windows scaling, as in Mission Planner.</td><td>Engineering</td></tr>
       <tr><td class="k">Other platforms</td><td>Linux, macOS and Android, reusing the same core code. See the Future Plans document.</td><td>Engineering</td></tr>

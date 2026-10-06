@@ -2,13 +2,14 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>Sarus Operation Planner 1.0.0 - User Manual</title>
+<!-- lint-allow: unlock -->
+<title>Sarus Operation Planner 1.1.0 - User Manual</title>
 <link rel="stylesheet" href="sarus-print.css">
-<style>@page { @top-left { content: "Sarus Operation Planner · User Manual"; font: 600 8pt "Barlow Semi Condensed", sans-serif; letter-spacing: .08em; text-transform: uppercase; color: #566472; } @bottom-left { content: "SOP-UM-001 · Version 1.0.0 · October 2026"; font: 8pt "Source Sans 3", sans-serif; color: #566472; } }</style>
+<style>@page { @top-left { content: "Sarus Operation Planner · User Manual"; font: 600 8pt "Barlow Semi Condensed", sans-serif; letter-spacing: .08em; text-transform: uppercase; color: #566472; } @bottom-left { content: "SOP-UM-001 · Version 1.1.0 · October 2026"; font: 8pt "Source Sans 3", sans-serif; color: #566472; } }</style>
 </head>
 <body>
 <span class="runtitle">Sarus Operation Planner · User Manual</span>
-<span class="runver">Document SOP-UM-001 · Version 1.0.0 · October 2026</span>
+<span class="runver">Document SOP-UM-001 · Version 1.1.0 · October 2026</span>
 
 <div class="cover">
   <div class="top">
@@ -22,7 +23,7 @@
     <div class="rule"></div>
   </div>
   <dl class="meta">
-    <div><dt>Software version</dt><dd>1.0.0</dd></div>
+    <div><dt>Software version</dt><dd>1.1.0</dd></div>
     <div><dt>Platform</dt><dd>Windows 10 / 11</dd></div>
     <div><dt>Document</dt><dd>SOP-UM-001</dd></div>
     <div><dt>Issued</dt><dd>October 2026</dd></div>
@@ -43,7 +44,7 @@
     <li><a href="#c8"><span class="n">8</span>PLAN – Flight Planner screen</a></li>
     <li><a href="#c9"><span class="n">9</span>SETUP – Hardware setup</a></li>
     <li><a href="#c10"><span class="n">10</span>CONFIG – Software configuration and tuning</a></li>
-    <li><a href="#c11"><span class="n">11</span>Parameter editing in Sarus</a></li>
+    <li><a href="#c11"><span class="n">11</span>Parameters, the lock and airframe limits</a></li>
     <li><a href="#c12"><span class="n">12</span>SIMULATION</a></li>
     <li><a href="#c13"><span class="n">13</span>HELP and updates</a></li>
     <li><a href="#c14"><span class="n">14</span>Keyboard shortcuts</a></li>
@@ -61,7 +62,7 @@
   <div class="callout danger"><strong class="t">Safety first</strong>
     <p>Take every propeller off before you calibrate, test motors, change parameters on the bench or install firmware. One wrong parameter is enough to crash an aircraft, so save a backup before each session and change one thing at a time. Even during an AUTO mission, keep the radio control transmitter in your hands, ready to take over. Fly only where and how the law allows; in India that means the Drone Rules 2021 and the DGCA's Digital Sky requirements. The software comes without warranty under the GNU GPL v3, and the operator is responsible for every flight.</p>
   </div>
-  <p>This manual covers Sarus Operation Planner 1.0.0 for Windows. The program is built on ArduPilot Mission Planner 1.3.83 and keeps every one of its screens, controls and keyboard shortcuts, so Mission Planner tutorials apply here too. What differs is the look, the way parameters are edited (chapter 11), more reliable communication with the aircraft, and where files are kept.</p>
+  <p>This manual covers Sarus Operation Planner 1.1.0 for Windows. The program is built on ArduPilot Mission Planner 1.3.83 and keeps every one of its screens, controls and keyboard shortcuts, so Mission Planner tutorials apply here too. What differs is the look, the way parameters are edited and protected (chapter 11), the airframe limits and in-flight alarm (chapter 11), more reliable communication with the aircraft, and where files are kept.</p>
   <p><b>Conventions:</b> on-screen names are in <span class="ui">bold</span>. Menu paths are written <span class="ui">CONFIG → Full Parameter List</span>. Keys are shown as <kbd>Ctrl</kbd>+<kbd>P</kbd>. Parameter names are in <code>MONOSPACE</code>.</p>
 </section>
 
@@ -74,7 +75,7 @@
   <p>In the air, the DATA screen gives you a live HUD, map, gauges and quick actions, and the program can speak mode changes, altitude and battery warnings. Afterwards you can replay the telemetry, download the flight controller's own log and analyse both. ArduPilot's simulator lets you fly without hardware, and optional equipment such as GPS, airspeed sensors, rangefinders, gimbals, OSD, CAN devices, ADS-B receivers and telemetry radios is set up from the same program.</p>
   <h3>Supported vehicles</h3>
   <table>
-    <thead><tr><th>Vehicle</th><th>Firmware</th><th>Sarus test status in 1.0.0</th></tr></thead>
+    <thead><tr><th>Vehicle</th><th>Firmware</th><th>Sarus test status in 1.1.0</th></tr></thead>
     <tbody>
       <tr><td class="k">Fixed wing and QuadPlane (VTOL)</td><td>ArduPilot Plane</td><td>Tested in the simulator</td></tr>
       <tr><td class="k">Multirotor and helicopter</td><td>ArduPilot Copter</td><td>Multirotor tested in the simulator</td></tr>
@@ -87,8 +88,10 @@
   <h3>What is different from Mission Planner</h3>
   <table>
     <tbody>
-      <tr><td class="k">Look</td><td>Sarus Dark (default) and Sarus Light themes, Sarus menu icons and logo. HUD and map colours are unchanged.</td></tr>
-      <tr><td class="k">Parameters</td><td>Out-of-range values give an amber warning instead of a blocking question. Read-only values can be changed after confirmation. Every written value is re-read from the aircraft (chapter 11).</td></tr>
+      <tr><td class="k">Look</td><td>Sarus Dark (default), Sarus Light and the opt-in Sarus Glass themes, Sarus menu icons and the "Powered by Sarus Aerospace" badge. HUD and map colours are unchanged.</td></tr>
+      <tr><td class="k">Parameters</td><td>Values are taken exactly as typed: no recommended ranges, no clamping, no suggested parameter sets. Read-only values can be changed after confirmation. Every written value is re-read from the aircraft (chapter 11).</td></tr>
+      <tr><td class="k">Parameter lock</td><td>Setup changes need the owner's admin password, enforced by the program and by aircraft running Sarus firmware (11.3).</td></tr>
+      <tr><td class="k">Airframe limits and alarm</td><td>Values beyond what the airframe can do blink red, and a siren asks continue, hold or return when a mission is not going as set (11.4, 11.5).</td></tr>
       <tr><td class="k">Reliability</td><td>Replies from the aircraft can no longer be lost when two requests wait at the same time (parameters, commands, missions).</td></tr>
       <tr><td class="k">Coexistence</td><td>Installs beside Mission Planner with separate settings, logs, maps and updates.</td></tr>
       <tr><td class="k">Privacy</td><td>Anonymous usage statistics are off by default.</td></tr>
@@ -105,7 +108,8 @@
   <table>
     <tbody>
       <tr><td class="k">Product</td><td>Sarus Operation Planner</td></tr>
-      <tr><td class="k">Version</td><td>1.0.0 (file version 1.3.83, the Mission Planner base)</td></tr>
+      <tr><td class="k">Version</td><td>1.1.0 (file version 1.3.83, the Mission Planner base)</td></tr>
+      <tr><td class="k">Sarus firmware</td><td>Sarus-2 on ArduPilot 4.7.1 and on ArduPilot 4.6.3 (Plane with QuadPlane, Copter, Rover)</td></tr>
       <tr><td class="k">Publisher</td><td>Sarus Aerospace Pvt Ltd, India · sarusaerospace.in</td></tr>
       <tr><td class="k">Based on</td><td>ArduPilot Mission Planner 1.3.83</td></tr>
       <tr><td class="k">Communication protocol</td><td>MAVLink 1 and 2</td></tr>
@@ -194,7 +198,7 @@
         <text x="180" y="72">①</text><text x="430" y="72">②</text><text x="570" y="72">③</text><text x="700" y="72">④</text>
       </g>
     </svg>
-    <figcaption>Figure 1. Main window on the DATA screen. ① Screen menu ② Connection type and speed ③ Link statistics and CONNECT ④ Sarus logo (opens sarusaerospace.in).</figcaption>
+    <figcaption>Figure 1. Main window on the DATA screen. ① Screen menu ② Connection type and speed ③ Link statistics and CONNECT ④ Sarus badge (opens sarusaerospace.in). Version 1.1.0 shows "Powered by Sarus Aerospace" in the badge.</figcaption>
   </figure>
   <table>
     <thead><tr><th>Menu</th><th>Screen</th><th>Use it to</th><th>Key</th></tr></thead>
@@ -317,7 +321,7 @@
   <ol class="steps">
     <li><b>Disconnect</b> (do not press CONNECT). Plug the flight controller into USB.</li>
     <li>Open <span class="ui">SETUP → Install Firmware</span>. The page shows the latest release for each vehicle (Plane, Copter, Heli, Rover, Sub, Antenna Tracker). It reads ArduPilot's live firmware list together with the Sarus firmware list, so new releases of either appear the next time the program starts.</li>
-    <li>Click the vehicle (for a QuadPlane: <b>Plane</b>). For Copter, choose the frame type when asked. If both an ArduPilot and a Sarus build exist for your board, a selection window lists them by file address; the Sarus files are the ones whose names start with <code>Sarus-</code>.</li>
+    <li>Click the vehicle (for a QuadPlane: <b>Plane</b>). For Copter, choose the frame type when asked. If more than one build exists for your board, a selection window lists them by file address: ArduPilot's, Sarus on 4.7.1 and Sarus on 4.6.3. The Sarus files are the ones whose names start with <code>Sarus-</code>. Installing firmware needs the admin password (11.3).</li>
     <li>Follow the prompts (unplug and replug the board if asked). Wait for "Upload Done". Never unplug during flashing.</li>
   </ol>
   <p><span class="ui">All Options</span> lists every version and board. <span class="ui">Beta firmwares</span> offers test releases. <span class="ui">Load custom firmware</span> flashes a <code>.apj</code> file you built or were given. <span class="ui">Bootloader Update</span> / <span class="ui">Force Bootloader</span> update the board's bootloader (advanced). <span class="ui">Install Firmware Legacy</span> is the older version of this page.</p>
@@ -334,7 +338,6 @@
       <tr><td class="k">ESC Calibration</td><td>ESC calibration and motor PWM type (Copter)</td></tr>
       <tr><td class="k">Flight Modes</td><td>Six modes for the mode switch; current mode and PWM shown live; Save Modes</td></tr>
       <tr><td class="k">FailSafe</td><td>Radio, battery (low and critical voltage / mAh) and GCS failsafes and their actions; live RC input and output display</td></tr>
-      <tr><td class="k">Initial Tune Parameter</td><td>Starting values from propeller size, battery cells and voltages (Copter)</td></tr>
       <tr><td class="k">HW ID</td><td>Hardware IDs of the connected sensors</td></tr>
       <tr><td class="k">ADSB</td><td>ADS-B receiver setup</td></tr>
     </tbody>
@@ -362,13 +365,14 @@
       <tr><td class="k">MAVFtp</td><td>Browse files on the flight controller's SD card: download, upload, delete (logs, Lua scripts, terrain)</td></tr>
       <tr><td class="k">User Params</td><td>Your own short list of parameters to edit</td></tr>
       <tr><td class="k">Full Parameter List</td><td>Every parameter in a searchable table (chapter 11)</td></tr>
+      <tr><td class="k">Airframe Limits</td><td>What the airframe can physically do, and the in-flight alarm settings (11.4, 11.5)</td></tr>
       <tr><td class="k">Planner</td><td>Program settings (below)</td></tr>
     </tbody>
   </table>
   <h3>10.1 Planner settings</h3>
   <table>
     <tbody>
-      <tr><td class="k">Display</td><td>Theme (Sarus Dark, Sarus Light, Mission Planner themes, Custom) · Layout (Basic / Advanced) · UI Language · HUD options · Speed, distance and altitude units</td></tr>
+      <tr><td class="k">Display</td><td>Theme (Sarus Dark, Sarus Light, Sarus Glass, Mission Planner themes, Custom; a new theme applies fully after a restart) · Layout (Basic / Advanced) · UI Language · HUD options · Speed, distance and altitude units</td></tr>
       <tr><td class="k">Speech</td><td>Enable Speech; spoken mode, waypoint, battery warning, altitude, arm/disarm, 30-second interval message; Only when Armed</td></tr>
       <tr><td class="k">Map</td><td>Map Follow, map rotated to follow the plane, track length, aircraft icon, COG, heading, nav bearing, turn radius, target, ADS-B, airports, TFRs, no-fly zones, map access mode, open map cache</td></tr>
       <tr><td class="k">Telemetry Rates</td><td>Requested rates for attitude, position, mode/status, RC and sensors (lower on slow radios)</td></tr>
@@ -380,8 +384,8 @@
 
 <!-- 11 -->
 <section class="chapter" id="c11">
-  <h2><span class="n">11</span>Parameter editing in Sarus</h2>
-  <p>Open <span class="ui">CONFIG → Full Parameter List</span>. Every parameter is shown with its value, units, recommended range, and description.</p>
+  <h2><span class="n">11</span>Parameters, the lock and airframe limits</h2>
+  <p>Open <span class="ui">CONFIG → Full Parameter List</span>. Every parameter is shown with its value, units, named options where it has them, and a description. Sarus takes the value you type and nothing else: it never pulls a value back into a range, and it offers no ready-made parameter sets.</p>
   <h3>11.1 Buttons</h3>
   <table>
     <tbody>
@@ -389,25 +393,74 @@
       <tr><td class="k">Refresh Params</td><td>Download all values from the aircraft again (<kbd>F5</kbd> anywhere)</td></tr>
       <tr><td class="k">Save to file / Load from file</td><td>Save all values to a <code>.param</code> file; load a file (loaded values are marked as changed until you Write)</td></tr>
       <tr><td class="k">Compare Params</td><td>Compare the aircraft with a file and choose which values to take</td></tr>
-      <tr><td class="k">Load Presaved</td><td>Load a ready-made parameter set for a known frame</td></tr>
-      <tr><td class="k">Reset to Default</td><td>Reset all parameters to firmware defaults (the aircraft must be recalibrated)</td></tr>
+      <tr><td class="k">Reset to Default</td><td>Reset all parameters to the firmware's defaults. On Sarus firmware that carries the owner's parameter set, this returns to that set (11.6). The aircraft must be recalibrated.</td></tr>
       <tr><td class="k">Commit Params</td><td>Hidden by default. Tells the aircraft to store written values permanently (same as <kbd>Ctrl</kbd>+<kbd>Y</kbd>)</td></tr>
       <tr><td class="k">Search · Modified</td><td>Filter by name or description · show only values you have changed and not yet written</td></tr>
+      <tr><td class="k">Lock parameters / Unlock parameters</td><td>At the bottom of the button column. Shows whether changes are unlocked and switches between the two (11.3)</td></tr>
     </tbody>
   </table>
-  <h3>11.2 Sarus behaviour</h3>
+  <h3>11.2 How Sarus treats your values</h3>
   <table>
     <thead><tr><th>Situation</th><th>What Sarus does</th></tr></thead>
     <tbody>
-      <tr><td class="k">Value outside the recommended range</td><td>The value is accepted. The cell turns <b style="color:#B7791F">amber</b> and its tooltip shows the recommended range. Nothing is blocked; you decide.</td></tr>
+      <tr><td class="k">A value ArduPilot would call unusual</td><td>Accepted as typed. Sarus 1.1.0 no longer shows or applies ArduPilot's recommended ranges, and the spin box under the Options column no longer clamps to them. The only judgement on a value is your own airframe limits (11.4).</td></tr>
       <tr><td class="k">Read-only parameter</td><td>A warning asks you to confirm. If you choose Yes, the value is sent.</td></tr>
       <tr><td class="k">After Write Params</td><td>Sarus re-reads every written value from the aircraft. If the aircraft limited, rounded or rejected a value, the window <span class="ui">Values changed by aircraft</span> lists it, and the table shows the value the aircraft actually uses.</td></tr>
+      <tr><td class="k">Suggested values</td><td>Not offered. <span class="ui">Load Presaved</span> and <span class="ui">SETUP → Initial Tune Parameter</span>, which write values the program proposes, are gone from Sarus.</td></tr>
     </tbody>
   </table>
-  <div class="callout"><strong class="t">Known firmware behaviours</strong>
-    <p>ArduPilot does not always keep what it acknowledges. While the loiter controller is running, in QLOITER for example, it caps <code>Q_LOIT_ACC_MAX_M</code> and <code>LOIT_ACC_MAX_M</code> at what the maximum lean angle allows; 9.81 then becomes about 5.66. <code>EK3_BCN_DELAY</code>, <code>EK3_FLOW_DELAY</code> and <code>LAND_THR_SLEW</code> are stored in 8 bits and stop at 127. The firmware overwrites <code>BARO*_GND_PRESS</code> on its own, and <code>MIS_TOTAL</code> cannot be written at all. Some settings, <code>Q_ENABLE</code>, the frame class and the serial protocols among them, only take effect after the flight controller has been rebooted and the parameters refreshed with <kbd>F5</kbd>. In each of these cases Sarus shows you the value the aircraft actually holds.</p>
+  <div class="callout"><strong class="t">What the firmware itself changes</strong>
+    <p>We wrote every parameter of QuadPlane, Copter and Rover to the simulator and read it back, about 3,000 in all. The firmware kept a different value in only a handful of cases, and none of them is an ArduPilot preference that could be removed safely. <code>Q_LOIT_ACC_MAX_M</code> and <code>LOIT_ACC_MAX_M</code> are capped at what the maximum lean angle allows, because a multirotor tilted to 30 degrees can only accelerate sideways at g·tan(30°), about 5.66 m/s², without losing height. <code>EK3_BCN_DELAY</code>, <code>EK3_FLOW_DELAY</code> and <code>LAND_THR_SLEW</code> are stored in 8 bits and stop at 127. The firmware overwrites <code>BARO*_GND_PRESS</code> on its own, and <code>MIS_TOTAL</code> cannot be written at all. Some settings, <code>Q_ENABLE</code>, the frame class and the serial protocols among them, only take effect after a reboot and a refresh with <kbd>F5</kbd>. In each case Sarus shows you the value the aircraft actually holds.</p>
   </div>
-  <div class="callout warn"><strong class="t">Good practice</strong><p>Save to file before you change anything. Change a few values at a time. After a tuning session, save again with a descriptive file name and date.</p></div>
+
+  <h3>11.3 The parameter lock</h3>
+  <p>Anyone with Sarus can connect, read every parameter, plan and fly. Changing how the aircraft is set up needs the Sarus admin password, which only the owner holds. When you try a change, Sarus asks for the password once; after that, changes are unlocked until you press <span class="ui">Lock parameters</span> or close the program.</p>
+  <table>
+    <thead><tr><th>Needs the password</th><th>Stays open</th></tr></thead>
+    <tbody>
+      <tr><td>Parameter writes from any page, loading a parameter file, Reset to Default, every calibration, reboot into the bootloader, firmware install, file writes over MAVFtp, receiver pairing, Lua scripting commands, MAVLink signing setup</td><td>Connecting, reading parameters, planning and uploading missions, arming, flying, mode changes, plain reboot, downloading logs</td></tr>
+    </tbody>
+  </table>
+  <p>The lock has two halves. Sarus itself refuses the change until the password is given. On aircraft running Sarus firmware (Sarus-2 or later), the aircraft refuses it as well: after the password, Sarus unlocks each connected aircraft with a signed, one-time code before the change is sent. Another ground station, an older copy of Sarus or a home-made tool cannot change the aircraft's setup without the password, even if it skips the program's own check. The aircraft reports each refusal in <span class="ui">Messages</span> as "Sarus: locked, ... refused".</p>
+  <table>
+    <tbody>
+      <tr><td class="k">Unlocking while armed</td><td>Refused by the aircraft. Unlock on the ground; an unlock made before take-off stays valid in the air, so you can tune in flight.</td></tr>
+      <tr><td class="k">Link lost</td><td>An aircraft locks itself again after 10 seconds without hearing the station that unlocked it, once disarmed. It never locks in flight. A reboot always locks it.</td></tr>
+      <tr><td class="k">Two stations</td><td>An unlock belongs to the station and radio link that made it. A second station, or the same station on a second radio, is still refused.</td></tr>
+      <tr><td class="k">"Aircraft refused the unlock"</td><td>Its firmware was built with a different admin key. Changes to it will not take effect.</td></tr>
+      <tr><td class="k">Aircraft on ArduPilot firmware</td><td>Only the program's half of the lock applies. Install Sarus firmware to lock the aircraft itself.</td></tr>
+      <tr><td class="k">Lost password</td><td>Nobody can recover it. The owner keeps a spare password in a safe place for that reason. Without either, aircraft need firmware with a new key.</td></tr>
+    </tbody>
+  </table>
+  <div class="callout warn"><strong class="t">What the lock cannot stop</strong><p>Someone with the flight controller on a bench can still flash other firmware through its USB bootloader. Protecting against that needs a secure bootloader, which is planned. Settings inside DroneCAN peripherals are not covered either.</p></div>
+
+  <h3>11.4 Airframe limits</h3>
+  <p><span class="ui">CONFIG → Airframe Limits</span> holds what this airframe can physically do. The page shows only the boxes that apply to the connected vehicle; leave a box empty to skip that check, and press <span class="ui">Save limits</span>. The limits are stored for this flight controller only, by its unique ID, under <code>Documents\Sarus Operation Planner\airframes</code>.</p>
+  <table>
+    <thead><tr><th>Vehicle</th><th>Limits you can enter</th></tr></thead>
+    <tbody>
+      <tr><td class="k">Fixed wing and QuadPlane</td><td>Stall speed, maximum airspeed, maximum climb and descent rate, maximum bank angle, maximum nose-up and nose-down pitch</td></tr>
+      <tr><td class="k">Multirotor and VTOL hover</td><td>Maximum lean angle, maximum speed, maximum climb and descent rate</td></tr>
+      <tr><td class="k">Rover</td><td>Maximum speed, smallest turn radius</td></tr>
+    </tbody>
+  </table>
+  <p>Any parameter that asks for more than the airframe can do blinks red: in the Full Parameter List as soon as you type it, and in a banner across the top of the window for as long as the aircraft holds it. The banner names the parameter and the limit; <span class="ui">Details</span> lists every one, and <span class="ui">Hide</span> hides it until the values change again. Sarus never changes or refuses the value. It understands the parameter names of both ArduPilot 4.6 and 4.7, in their own units (centidegrees, cm/s, degrees or m/s).</p>
+
+  <h3>11.5 The in-flight alarm</h3>
+  <p>During a mission (AUTO or GUIDED, armed), Sarus compares what the aircraft is trying to do with what it achieves: altitude, airspeed and position on the planned track. When one of them stays further off than the alarm settings on the Airframe Limits page, for longer than the set time, and is not getting smaller, a siren sounds and a window offers three choices.</p>
+  <table>
+    <tbody>
+      <tr><td class="k">Continue plan</td><td>The mission goes on unchanged. The alarm stays quiet for 60 seconds.</td></tr>
+      <tr><td class="k">Hold position</td><td>The aircraft loiters where it is (QLOITER when hovering, HOLD for a rover).</td></tr>
+      <tr><td class="k">Return home</td><td>The aircraft returns to launch (RTL).</td></tr>
+      <tr><td class="k">No answer in 15 seconds</td><td>The mission continues with the parameters as set. The alarm never changes anything on its own.</td></tr>
+    </tbody>
+  </table>
+  <p>Defaults: altitude 15 m, airspeed 4 m/s, track 40 m, for 10 seconds. Take-off, landing and return legs are not judged, nor is airspeed before the aircraft is flying on its wings, because large differences there are normal. An error that is closing, such as a climb to a new altitude, does not raise the alarm. In the simulator, the alarm stayed silent through take-off, transition and climb, and sounded 11 seconds after the engine was cut in cruise.</p>
+
+  <h3>11.6 Sarus firmware and its defaults</h3>
+  <p>Sarus firmware comes in two lines with the same Sarus changes: one on ArduPilot 4.7.1, the newest stable release, and one on 4.6.3, the last release of the longer-proven 4.6 series. Install Firmware lists both and asks which to load. Firmware built with the owner's parameter set uses it as its defaults, so a new board, a parameter reset or a firmware install starts from the owner's values. Sensor calibrations are never part of that set; every aircraft still needs its own.</p>
+  <div class="callout warn"><strong class="t">Good practice</strong><p>Save to file before you change anything. Change a few values at a time. After a tuning session, save again with a descriptive file name and date, and press Lock parameters before you hand the laptop to someone else.</p></div>
 </section>
 
 <!-- 12 -->
@@ -548,7 +601,10 @@
       <tr><td class="k">"No heartbeat" / connection timeout</td><td>Correct port and speed (USB 115200, SiK 57600); the port is not used by Mission Planner or another program; radios are paired and powered.</td></tr>
       <tr><td class="k">Parameter download stops</td><td>Weak radio link: move closer or use USB, or reduce telemetry rates (CONFIG → Planner). Press <kbd>F5</kbd> to retry.</td></tr>
       <tr><td class="k">Cannot arm</td><td>Read the PreArm message on the HUD or in the Messages tab and fix its cause; never disable arming checks to fly.</td></tr>
-      <tr><td class="k">"Values changed by aircraft"</td><td>The firmware limited or rejected a value. The table shows the real value. See chapter 11.2.</td></tr>
+      <tr><td class="k">"Values changed by aircraft"</td><td>The firmware limited or rejected a value, or the aircraft is locked. The table shows the real value. See 11.2 and 11.3.</td></tr>
+      <tr><td class="k">Password asked for every change</td><td>Expected while locked. Type the admin password once; changes stay unlocked until you press Lock parameters or close Sarus.</td></tr>
+      <tr><td class="k">"Sarus: locked, ... refused" in Messages</td><td>The aircraft refused a change because this station has not unlocked it. Unlock again while disarmed; check that only one station is connected.</td></tr>
+      <tr><td class="k">Red banner at the top</td><td>A parameter asks for more than the airframe limits allow. Press Details, then fix the parameter or the limit (11.4).</td></tr>
       <tr><td class="k">Firmware page empty</td><td>Internet connection needed; disconnect from the aircraft first.</td></tr>
       <tr><td class="k">Map is grey</td><td>No internet and no cached tiles for that area. Prefetch maps before going to the field (PLAN → right-click → Map Tool → Prefetch).</td></tr>
       <tr><td class="k">"Windows protected your PC"</td><td>See 4.2. Appears until the installer is code-signed.</td></tr>

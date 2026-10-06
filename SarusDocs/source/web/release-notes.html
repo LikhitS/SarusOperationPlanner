@@ -1,6 +1,6 @@
-<title>Sarus Operation Planner 1.0.0</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600;700&family=Source+Sans+3:wght@400;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<!-- lint-allow: unlock -->
+<title>Sarus Operation Planner 1.1.0</title>
+<link rel="stylesheet" href="../pdf/fonts.css">
 <style>
 /* Layout: a single release-notes column with a compact spec rail; aviation-console palette from the Sarus brand */
 :root {
@@ -16,7 +16,9 @@
 :root[data-theme="dark"] {
   --bg: #11161c; --surface: #1a2129; --ink: #e7ecf1; --muted: #9aa8b6; --line: #2d3843;
   --accent: #62b5ec; --brand: #e0566a; --ok: #4cc58a; --warn: #e8b45a; color-scheme: dark }
-body { background: var(--bg); color: var(--ink); font: 16px/1.6 var(--body); }
+@media print { :root { --bg: #f4f6f8; --surface: #ffffff; --ink: #14202b; --muted: #566472; --line: #d5dce3;
+  --accent: #1a6fae; --brand: #b5263a; --ok: #1f8f57; --warn: #b7791f; } }
+body { background: var(--bg); color: var(--ink); font: 16px/1.6 var(--body); margin: 0; }
 .wrap { max-width: 980px; margin: 0 auto; padding-inline: 20px; padding-block: 40px 64px; }
 header { display: grid; gap: 10px; border-bottom: 2px solid var(--ink); padding-bottom: 18px; }
 .eyebrow { font: 600 12px/1 var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--brand); }
@@ -24,92 +26,113 @@ h1 { font: 700 clamp(2rem, 5vw, 3.1rem)/1.05 var(--display); margin: 0; text-wra
 .lede { color: var(--muted); max-width: 64ch; margin: 0; }
 .grid { display: grid; grid-template-columns: minmax(0, 1fr) 260px; gap: 40px; margin-top: 28px; }
 @media (max-width: 760px) { .grid { grid-template-columns: 1fr; } }
+@media print { .grid { grid-template-columns: 1fr; gap: 20px; } aside { order: -1; } h2 { break-after: avoid; } }
 main { min-width: 0; }
 h2 { font: 600 1.45rem/1.2 var(--display); margin: 34px 0 10px; letter-spacing: .01em; text-wrap: balance; }
 h2:first-child { margin-top: 0; }
-h3 { font: 600 1.08rem/1.3 var(--display); margin: 20px 0 6px; }
+h3 { font: 600 1.08rem/1.3 var(--display); margin: 20px 0 6px; break-after: avoid; }
 p, li { max-width: 68ch; }
-ul { padding-left: 1.1rem; display: grid; gap: 6px; }
 code, .num { font-family: var(--mono); font-size: .88em; }
 .num { font-variant-numeric: tabular-nums; }
 table { border-collapse: collapse; width: 100%; font-size: .95rem; }
-.tbl { overflow-x: auto; margin: 10px 0 4px; }
+.tbl { overflow-x: auto; margin: 10px 0 4px; break-inside: avoid; }
 th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
 th { font: 600 12px/1.2 var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
 td.good { color: var(--ok); font-weight: 600; }
 td.bad { color: var(--brand); font-weight: 600; }
-.note { border-left: 3px solid var(--warn); padding: 8px 14px; background: var(--surface); margin: 12px 0; }
+.note { border-left: 3px solid var(--warn); padding: 8px 14px; background: var(--surface); margin: 12px 0; break-inside: avoid; }
 aside { display: grid; gap: 18px; align-content: start; }
-.spec { background: var(--surface); border: 1px solid var(--line); padding: 16px 18px; display: grid; gap: 10px; }
+.spec { background: var(--surface); border: 1px solid var(--line); padding: 16px 18px; display: grid; gap: 10px; break-inside: avoid; }
 .spec dl { margin: 0; display: grid; gap: 10px; }
 .spec dt { font: 600 11px/1 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
 .spec dd { margin: 3px 0 0; }
 a { color: var(--accent); }
-a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 footer { margin-top: 48px; padding-top: 14px; border-top: 1px solid var(--line); color: var(--muted); font-size: .9rem; }
 </style>
 
 <div class="wrap">
   <header>
     <span class="eyebrow">Release notes · Windows</span>
-    <h1>Sarus Operation Planner 1.0.0</h1>
-    <p class="lede">The ground control station for ArduPilot aircraft from Sarus Aerospace. It is based on ArduPilot Mission Planner 1.3.83 and keeps all of its screens, features and keyboard shortcuts, with a Sarus look, safer parameter editing and fixes to how it talks to the aircraft.</p>
+    <h1>Sarus Operation Planner 1.1.0</h1>
+    <p class="lede">The ground control station for ArduPilot aircraft from Sarus Aerospace, based on ArduPilot Mission Planner 1.3.83 with all of its screens, features and keyboard shortcuts. This release adds a password lock on the aircraft's setup, takes your parameter values exactly as you set them, and watches both the airframe's limits and the mission in flight. It comes with the second Sarus firmware release, Sarus-2, on ArduPilot 4.7.1 and on 4.6.3.</p>
   </header>
 
   <div class="grid">
     <main>
-      <h2>What's different from Mission Planner</h2>
+      <h2>What's new in 1.1.0</h2>
 
-      <h3>Parameter editing</h3>
-      <p>A value outside ArduPilot's recommended range, such as an unusually high TECS climb rate, is no longer stopped by a question. Sarus writes it as typed, turns the cell amber and puts the recommended range in the tooltip. Parameters that ArduPilot marks read-only can be changed too, once you confirm a warning.</p>
-      <p>After every write, Sarus asks the aircraft for each value again. Where the aircraft rounded, limited or refused a value, you get a list, and the table shows what the aircraft kept. During testing this caught <code>Q_LOIT_ACC_MAX_M</code>: confirmed at 9.81, actually running at 5.66.</p>
+      <h3>The parameter lock</h3>
+      <p>Anyone can still connect, read the parameters, plan and fly. Changing the aircraft's setup now needs the owner's admin password: parameter writes from any page, parameter files, resets, calibrations, firmware install, file writes over MAVFtp and reboot into the bootloader. Sarus asks for the password once, and changes stay unlocked until you press Lock parameters or close the program.</p>
+      <p>Aircraft running Sarus-2 firmware enforce the same rule themselves, so another ground station or an older copy of Sarus cannot get round it. After the password, Sarus unlocks each connected aircraft with a signed one-time code. The aircraft holds only public keys, and the password itself is stored nowhere, not even in Sarus. An unlock belongs to one station on one link. It can only be made on the ground but stays valid in flight, and it ends on reboot, on Lock, or after 10 seconds of silence once disarmed.</p>
 
-      <h3>Replies that went missing</h3>
-      <p>Mission Planner could lose an answer from the aircraft when two parts of the program were waiting at the same time, for example a background camera query while you read parameters. One would pick up the other's reply and throw it away, and you would see a timeout even though the aircraft had answered. Sarus registers for each reply before sending the question, so nothing is taken from it. The figures below come from the simulator under heavy load.</p>
+      <h3>Only your values</h3>
+      <p>The Full Parameter List no longer shows or flags ArduPilot's recommended ranges, and its spin box no longer pulls a value back into them. Load Presaved and Initial Tune Parameter, which wrote values the program proposed, are gone. After every write Sarus still reads each value back and lists any the aircraft did not keep. We wrote all 3,000 or so parameters of QuadPlane, Copter and Rover and found one real limit in the firmware: loiter acceleration is capped at what the lean angle physically allows, g·tan(angle). It stays, and Sarus shows it when it applies.</p>
+
+      <h3>Airframe limits</h3>
+      <p>A new page, CONFIG → Airframe Limits, records what each airframe can do: stall speed, maximum airspeed, climb and descent rates, bank and pitch, the multirotor lean angle and speeds, and for a rover its speed and turn radius. Any parameter that asks for more blinks red in the parameter list as you type it, and in a banner across the window while the aircraft holds it. The value is never changed. The limits are stored per flight controller and understand the parameter names and units of both ArduPilot 4.6 and 4.7.</p>
+
+      <h3>In-flight alarm</h3>
+      <p>During a mission Sarus compares the altitude, airspeed and track the aircraft is trying to hold with what it achieves. When one stays off by more than the set amount for longer than the set time, and is not closing, a siren sounds and you choose Continue plan, Hold position or Return home. With no answer in 15 seconds the mission continues as planned. Take-off, landing and return legs are not judged.</p>
+
+      <h3>Look</h3>
+      <p>The badge at the top right now reads "Powered by Sarus Aerospace" beside the logo. Sarus Glass joins the theme list as an option, with a frosted menu bar, a slate window frame, card-style group boxes and softly raised buttons. The default is still Sarus Dark, and the HUD and map keep their colours in every theme.</p>
+
+      <h3>Sarus firmware Sarus-2</h3>
       <div class="tbl">
         <table>
-          <thead><tr><th>Operation</th><th>Before</th><th>Sarus 1.0.0</th></tr></thead>
+          <thead><tr><th>Line</th><th>Based on</th><th>Reports itself as</th></tr></thead>
+          <tbody>
+            <tr><td>4.7</td><td>ArduPilot Plane, Copter and Rover 4.7.1</td><td><code>ArduPlane V4.7.1 Sarus-2</code></td></tr>
+            <tr><td>4.6</td><td>ArduPilot Plane, Copter and Rover 4.6.3</td><td><code>ArduPlane V4.6.3 Sarus-2</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>Both lines carry the parameter lock and room for the owner's parameter set as firmware defaults, so a new board, a parameter reset or a firmware install starts from the owner's values. Install Firmware lists both lines and asks which one to load.</p>
+
+      <h2>How 1.1.0 was tested</h2>
+      <p>The full regression ran against Sarus-2 on 4.7.1 in the simulator and passed all 16 steps: the parameter editor, QuadPlane, Copter and Rover missions, the limits and alarm flight, a flight over a poor link, every keyboard shortcut with a concurrency stress test, every SETUP and CONFIG page, and a write, read-back and restore of every QuadPlane and Rover parameter. On 4.6.3 the lock, alarm, Copter and Rover runs passed as well.</p>
+      <p>The lock was tested from both sides. The firmware's own tests check each refusal, wrong keys, replayed and stale unlocks, other stations and links, arming, the silence timeout and reboot: 35 checks on each line. From Sarus, 18 checks confirmed that the program's signatures are accepted by the real firmware and that a write which skips the program is still refused. For the alarm, the simulated engine was cut in cruise. The alarm stayed silent through take-off, transition and climb, sounded 11 to 12 seconds after the cut, let the mission continue when nobody answered, and switched to loiter on Hold.</p>
+      <p class="note">All flights were in ArduPilot's simulator. Test with your own aircraft, radios and flight controller on the bench before you fly, and keep the lock password and its spare in a safe place: nobody can recover them.</p>
+
+      <h2>What's different from Mission Planner</h2>
+      <p>Everything below was already in 1.0.0, apart from the parameter changes described above.</p>
+
+      <h3>Replies that went missing</h3>
+      <p>Mission Planner could lose an answer from the aircraft when two parts of the program were waiting at the same time, for example a background camera query while you read parameters. One would pick up the other's reply and throw it away, and you would see a timeout even though the aircraft had answered. Sarus registers for each reply before sending the question, so nothing is taken from it.</p>
+      <div class="tbl">
+        <table>
+          <thead><tr><th>Operation</th><th>Before</th><th>Sarus</th></tr></thead>
           <tbody>
             <tr><td>Parameter reads</td><td class="bad num">6 of 45 lost</td><td class="good num">0 of 600 lost</td></tr>
             <tr><td>Command acknowledgements (arm, mode)</td><td class="bad num">5 of 15 lost</td><td class="good num">0 of 1,811 lost</td></tr>
             <tr><td>Mission upload and download</td><td class="bad num">4 of 10 failed</td><td class="good num">0 failed</td></tr>
             <tr><td>Commands with coordinates</td><td class="bad num">2 of 45 lost</td><td class="good num">0 of 887 lost</td></tr>
-            <tr><td>Flight-log list during parameter reads</td><td class="num">not measured</td><td class="good num">0 of 326 failed</td></tr>
           </tbody>
         </table>
       </div>
 
       <h3>Smaller fixes</h3>
-      <p>The update check stopped complaining when the server had no update yet, and plugins built by an older version are no longer reused after an upgrade, where they used to fail every second. To learn a release's size, the updater now reads one header instead of downloading the whole file. A legacy rally-point request that got lost is now retried with the right message; before, the retry went out as a fence request. Silent installation with <code>msiexec /qn</code> used to hang for ever on the USB driver wizard and now completes. Installing by double-click works exactly as before.</p>
+      <p>The update check no longer complains when there is no update yet, and plugins built by an older version are not reused after an upgrade. A lost legacy rally-point request is retried with the right message. Silent installation with <code>msiexec /qn</code> completes instead of hanging on the USB driver wizard.</p>
 
-      <h3>Firmware</h3>
-      <p>Install Firmware lists Sarus firmware builds next to ArduPilot's. They use ArduPilot's board identities, so boards are recognised as usual, and their file names start with "Sarus-". ArduPilot's own firmware is still there, and new ArduPilot releases appear the day they are published.</p>
-
-      <h3>Look, privacy and coexistence</h3>
-      <p>Sarus Dark is the default theme, with Sarus Light as the alternative; Mission Planner's themes are still in the list. The menu icons and the logo are new. The HUD and the map kept Mission Planner's colours on purpose, because pilots read them at a glance.</p>
-      <p>Usage statistics are off unless you turn them on. Sarus installs beside Mission Planner rather than over it and keeps its settings, logs and maps in <code>Documents\Sarus Operation Planner</code> and <code>ProgramData\Sarus Operation Planner</code>. Program updates come from the Sarus releases on GitHub.</p>
-      <p>Mission Planner's Altitude Angel plugin is not included, so no login is asked for and the program places no airspace restrictions on a flight; the aircraft's own geofence and failsafes are untouched. The installer allows the program on every Windows network type, which ends the repeated firewall question. The built-in web server, which Mission Planner opens to the whole network, now accepts flight commands only from the PC it runs on, while telemetry can still be viewed from other devices.</p>
-
-      <h2>How it was tested</h2>
-      <p>The longest test flew 98 automatic QuadPlane VTOL missions in a row over four hours. None failed, every landing was within 0.1 m of home, and memory stayed flat. Every vehicle parameter was written, read back and restored: about 1,180 on QuadPlane, 1,000 on Copter and 886 on Rover. With the aircraft connected, we opened every SETUP and CONFIG page (46 on QuadPlane, 48 on Copter). Copter flew a mission with take-off, waypoints and return to launch, and Rover drove a square and came back to within 0.2 m of its start.</p>
-      <p>To see how the program copes with a poor radio, one flight ran with 5% of messages dropped, 300 ms of delay and a 10-second blackout. Telemetry was back 0.3 seconds after the link returned. All main keyboard shortcuts were pressed and checked. Finally, the installer was run silently on fresh Windows Server 2022 and 2025 machines that already had Mission Planner; Sarus started, ran for a minute and uninstalled cleanly, and Mission Planner was unaffected.</p>
-      <p class="note">All flights were in ArduPilot's simulator. Test with your own aircraft, radios and flight controller on the bench before you fly.</p>
+      <h3>Privacy, airspace and coexistence</h3>
+      <p>Usage statistics are off unless you turn them on. Sarus installs beside Mission Planner and keeps its own settings, logs and maps. Mission Planner's Altitude Angel plugin is not included and can never load, so the program places no airspace restrictions on a flight; the aircraft's own geofence and failsafes are untouched. The installer allows the program on every Windows network type, and the built-in web server accepts flight commands only from the PC it runs on.</p>
 
       <h2>Known limitations</h2>
-      <p>This release runs on Windows only. On screens scaled above 100%, text looks slightly soft, as it does in Mission Planner. Map imagery comes from the same third-party providers Mission Planner uses, under their terms. Like Mission Planner, the installer adds USB drivers and their signing certificate; in a silent installation Windows only adds the drivers whose publisher it already trusts. Until the installer is code-signed, Windows may say "Windows protected your PC". Choose More info, then Run anyway.</p>
+      <p>This release runs on Windows only. The lock cannot stop someone with the flight controller on a bench from flashing other firmware over USB; a secure bootloader is planned for that. Settings inside DroneCAN peripherals are not covered by the lock. Until the installer is code-signed, Windows may say "Windows protected your PC". Choose More info, then Run anyway.</p>
     </main>
 
     <aside>
       <div class="spec">
         <dl>
-          <div><dt>Version</dt><dd class="num">1.0.0</dd></div>
+          <div><dt>Version</dt><dd class="num">1.1.0</dd></div>
           <div><dt>Based on</dt><dd>ArduPilot Mission Planner <span class="num">1.3.83</span></dd></div>
-          <div><dt>Tested with</dt><dd>ArduPilot Plane / QuadPlane (VTOL), Copter and Rover 4.7, in the simulator</dd></div>
+          <div><dt>Sarus firmware</dt><dd>Sarus-2 on ArduPilot <span class="num">4.7.1</span> and <span class="num">4.6.3</span></dd></div>
+          <div><dt>Tested with</dt><dd>Plane / QuadPlane (VTOL), Copter and Rover, in the simulator</dd></div>
           <div><dt>Windows</dt><dd>10 or 11, 64-bit</dd></div>
           <div><dt>Needs</dt><dd>.NET Framework 4.7.2 or later, about 500 MB disk, 4 GB RAM</dd></div>
           <div><dt>Licence</dt><dd>GNU GPL v3, no warranty</dd></div>
-          <div><dt>Source code</dt><dd><a href="https://github.com/LikhitS/SarusOperationPlanner">github.com/LikhitS/SarusOperationPlanner</a></dd></div>
-          <div><dt>Publisher</dt><dd>Sarus Aerospace Pvt Ltd · <a href="https://www.sarusaerospace.in/">sarusaerospace.in</a></dd></div>
+          <div><dt>Source code</dt><dd>github.com/LikhitS/SarusOperationPlanner</dd></div>
+          <div><dt>Publisher</dt><dd>Sarus Aerospace Pvt Ltd · sarusaerospace.in</dd></div>
         </dl>
       </div>
     </aside>

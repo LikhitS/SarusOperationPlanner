@@ -1,6 +1,6 @@
+<!-- lint-allow: unlock -->
 <title>Sarus Field Test Checklist</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600;700&family=Source+Sans+3:wght@400;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="../pdf/fonts.css">
 <style>
 /* Layout: preflight-card style checklist; phases in order, each item a tickable row with an expected result */
 :root {
@@ -48,11 +48,12 @@ code { font-family: var(--mono); font-size: .86em; }
 .log ul { margin: 0; padding-left: 1.1rem; display: grid; gap: 4px; }
 footer { margin-top: 40px; color: var(--muted); font-size: .9rem; border-top: 1px solid var(--line); padding-top: 12px; }
 @media (prefers-reduced-motion: reduce) { .progress > i { transition: none; } }
+@media print { section > h2, section > p { break-after: avoid; } li { break-inside: avoid; } section:has(#d1) { break-before: page; margin-top: 0; } footer { break-before: avoid; margin-top: 16px; } .log { break-inside: avoid; } }
 </style>
 
 <div class="wrap">
   <header>
-    <span class="eyebrow">Sarus Operation Planner 1.0.0 · bench and first flight</span>
+    <span class="eyebrow">Sarus Operation Planner 1.1.0 · Sarus-2 firmware · bench and first flight</span>
     <h1>Sarus Field Test Checklist</h1>
     <p class="lede">Nothing here is optional. Work through the four phases in order before Sarus Operation Planner controls a real aircraft, and if an item fails, stop there and find out why before going on. The ticks are remembered by this browser only, so use one device per test.</p>
     <div class="bar" aria-live="polite">
@@ -67,7 +68,8 @@ footer { margin-top: 40px; color: var(--muted); font-size: .9rem; border-top: 1p
     <h2><span class="phase">A</span> Before you start</h2>
     <p class="when">At the desk, before connecting anything.</p>
     <ol>
-      <li><input type="checkbox" id="a1"><label for="a1"><span class="what">Record the versions under test</span><span class="expect">Sarus version (Help screen), flight controller board, ArduPilot firmware version, telemetry radio model.</span></label></li>
+      <li><input type="checkbox" id="a1"><label for="a1"><span class="what">Record the versions under test</span><span class="expect">Sarus version (Help screen), flight controller board, firmware version and line (Sarus-2 on 4.7.1 or on 4.6.3), telemetry radio model.</span></label></li>
+      <li><input type="checkbox" id="a5"><label for="a5"><span class="what">Have the admin password with you</span><span class="expect">Whoever tests needs the Sarus admin password for every parameter change and calibration. Bring it, but do not write it on the test record.</span></label></li>
       <li><input type="checkbox" id="a2"><label for="a2"><span class="what">Save a parameter backup</span><span class="expect">CONFIG → Full Parameter List → <b>Save</b>. Keep the file with the test record.</span></label></li>
       <li><input type="checkbox" id="a3"><label for="a3"><span class="what">Check the RC transmitter failsafe</span><span class="expect">Transmitter off → receiver outputs failsafe throttle. Know which flight mode the aircraft enters.</span></label></li>
       <li><input type="checkbox" id="a4"><label for="a4"><span class="what">Choose the light and dark theme for the field</span><span class="expect">Open Sarus outdoors in sunlight and pick the theme you can read best.</span></label></li>
@@ -78,7 +80,7 @@ footer { margin-top: 40px; color: var(--muted); font-size: .9rem; border-top: 1p
     <h2><span class="phase">B</span> Connect</h2>
     <p class="when">Aircraft on the bench with the battery in. Props still off.</p>
     <ol>
-      <li><input type="checkbox" id="b1"><label for="b1"><span class="what">Connect over USB</span><span class="expect">Pick the COM port, 115200, Connect. <b>Expect:</b> parameters download, HUD moves, title bar shows the firmware version.</span></label></li>
+      <li><input type="checkbox" id="b1"><label for="b1"><span class="what">Connect over USB</span><span class="expect">Pick the COM port, 115200, Connect. <b>Expect:</b> parameters download, HUD moves, title bar shows the firmware version, for example <code>ArduPlane V4.7.1 Sarus-2</code>.</span></label></li>
       <li><input type="checkbox" id="b2"><label for="b2"><span class="what">Connect over the telemetry radio</span><span class="expect">Usually 57600. <b>Expect:</b> link quality above 90% at bench distance, no "no data" warnings.</span></label></li>
       <li><input type="checkbox" id="b3"><label for="b3"><span class="what">Unplug and replug the radio while connected</span><span class="expect"><b>Expect:</b> telemetry resumes within a few seconds of reconnecting, no error dialogs.</span></label></li>
     </ol>
@@ -94,7 +96,10 @@ footer { margin-top: 40px; color: var(--muted); font-size: .9rem; border-top: 1p
       <li><input type="checkbox" id="c4"><label for="c4"><span class="what">RC inputs and flight mode switch</span><span class="expect">SETUP → Radio Calibration. Move every stick and switch. <b>Expect:</b> the mode shown in Sarus matches the switch position.</span></label></li>
       <li><input type="checkbox" id="c5"><label for="c5"><span class="what">Motor and servo test</span><span class="expect">SETUP → Optional Hardware → Motor Test at 5% throttle, props off. <b>Expect:</b> each VTOL motor spins in the order and direction of your frame diagram; control surfaces move the right way.</span></label></li>
       <li><input type="checkbox" id="c6"><label for="c6"><span class="what">Parameter write and read-back</span><span class="expect">Change <code>TECS_CLMB_MAX</code> by 0.5 in the Full Parameter List, Write, then set it back. <b>Expect:</b> no "values changed by aircraft" message for a normal value.</span></label></li>
-      <li><input type="checkbox" id="c7"><label for="c7"><span class="what">Out-of-range warning</span><span class="expect">Type a value above the recommended maximum. <b>Expect:</b> amber cell with the range in its tooltip and no blocking question. Do not write it; press Refresh.</span></label></li>
+      <li><input type="checkbox" id="c7"><label for="c7"><span class="what">Values taken as typed</span><span class="expect">Type an unusual value for a harmless parameter. <b>Expect:</b> no range shown, no colour flag, no question, and the spin box does not change it. Do not write it; press Refresh.</span></label></li>
+      <li><input type="checkbox" id="c11"><label for="c11"><span class="what">Parameter lock, this station</span><span class="expect">Close and reopen Sarus, connect, change <code>LOG_DISARMED</code> and Write. <b>Expect:</b> the password is asked for; after it, the value is written and Messages shows "Sarus: parameters unlocked". Press Lock parameters and try again: the password is asked for again. A wrong password three times changes nothing.</span></label></li>
+      <li><input type="checkbox" id="c12"><label for="c12"><span class="what">Parameter lock, the aircraft itself</span><span class="expect">Connect a second ground station (another copy of Sarus without the password, or Mission Planner) on a second link. Try to change a parameter there. <b>Expect:</b> the value does not change, and Messages shows "Sarus: locked, parameter change refused". Calibrations are refused the same way.</span></label></li>
+      <li><input type="checkbox" id="c13"><label for="c13"><span class="what">Airframe limits</span><span class="expect">CONFIG → Airframe Limits: enter this airframe's real stall speed, maximum airspeed, climb and descent rates and bank angle, then Save limits. <b>Expect:</b> the box at the bottom lists any parameter beyond them, those parameters blink red in the Full Parameter List and a red banner names them. Fix the parameter or the limit before flying.</span></label></li>
       <li><input type="checkbox" id="c8"><label for="c8"><span class="what">Mission, fence and rally round trip</span><span class="expect">PLAN: create a short mission with VTOL takeoff and VTOL land, Write, then Read. <b>Expect:</b> identical points, altitudes and commands. Repeat for a geofence and a rally point.</span></label></li>
       <li><input type="checkbox" id="c9"><label for="c9"><span class="what">Arming checks are shown</span><span class="expect">Try to arm with a known problem (for example no GPS fix). <b>Expect:</b> the PreArm message appears on the HUD and in Messages.</span></label></li>
       <li><input type="checkbox" id="c10"><label for="c10"><span class="what">Log download</span><span class="expect">DATA → DataFlash Logs → Download. <b>Expect:</b> the latest log downloads and opens in Review a Log.</span></label></li>
@@ -112,6 +117,7 @@ footer { margin-top: 40px; color: var(--muted); font-size: .9rem; border-top: 1p
       <li><input type="checkbox" id="d4"><label for="d4"><span class="what">TECS behaviour</span><span class="expect">FBWB or CRUISE, then climb and descend. <b>Expect:</b> climb and sink rates close to TECS_CLMB_MAX and TECS_SINK_MAX.</span></label></li>
       <li><input type="checkbox" id="d5"><label for="d5"><span class="what">Small AUTO mission</span><span class="expect">VTOL takeoff, two waypoints, VTOL land. <b>Expect:</b> Sarus shows the current waypoint and the aircraft lands within a few metres of the planned point.</span></label></li>
       <li><input type="checkbox" id="d6"><label for="d6"><span class="what">Return home</span><span class="expect">Switch to RTL (or QRTL) from a distance. <b>Expect:</b> the aircraft returns and lands as configured.</span></label></li>
+      <li><input type="checkbox" id="d8"><label for="d8"><span class="what">No false alarm on a normal mission</span><span class="expect">During the AUTO mission above, with the in-flight alarm on (default settings). <b>Expect:</b> no siren through take-off, transition, the legs and landing. If it sounds, note the message and time, press Continue plan or take over, and check the alarm settings against the aircraft before the next flight.</span></label></li>
       <li><input type="checkbox" id="d7"><label for="d7"><span class="what">Link loss at altitude</span><span class="expect">With the pilot ready on the transmitter, switch off the ground radio for 10 s. <b>Expect:</b> the configured GCS failsafe action; Sarus recovers telemetry when the radio is back on.</span></label></li>
     </ol>
   </section>
@@ -121,12 +127,12 @@ footer { margin-top: 40px; color: var(--muted); font-size: .9rem; border-top: 1p
     <p>File the telemetry logs (<code>.tlog</code>, found in <code>Documents\Sarus Operation Planner\logs</code>) and the flight controller's <code>.bin</code> log for every flight, together with the parameter backup from step A2. Add a note for anything unexpected, a message or a behaviour, and write down when it happened. A time stamp makes the log far easier to read later.</p>
   </div>
 
-  <footer>Sarus Aerospace Pvt Ltd · checklist for Sarus Operation Planner 1.0.0. Heights, distances and failsafe actions here are examples; set them for your aircraft and for the Drone Rules that apply where you fly.</footer>
+  <footer>Sarus Aerospace Pvt Ltd · checklist for Sarus Operation Planner 1.1.0 and Sarus-2 firmware. Heights, distances and failsafe actions here are examples; set them for your aircraft and for the Drone Rules that apply where you fly.</footer>
 </div>
 
 <script>
 (function () {
-  var KEY = 'sarus-field-checklist-v1';
+  var KEY = 'sarus-field-checklist-v1.1';
   var boxes = Array.prototype.slice.call(document.querySelectorAll('li input[type=checkbox]'));
   var saved = {};
   try { saved = JSON.parse(localStorage.getItem(KEY) || '{}') || {}; } catch (e) { saved = {}; }

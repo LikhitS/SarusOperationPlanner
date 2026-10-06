@@ -1,6 +1,6 @@
+<!-- lint-allow: unlock -->
 <title>Sarus Legal Drafts</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600;700&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&family=JetBrains+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="../pdf/fonts.css">
 <style>
 /* Layout: one reading column of three numbered draft documents, each followed by notes for counsel */
 :root {
@@ -51,7 +51,7 @@ footer { margin-top: 56px; padding-top: 12px; border-top: 1px solid var(--line);
   <header>
     <span class="eyebrow">Sarus Aerospace Pvt Ltd · for legal review</span>
     <h1>Sarus Legal Drafts</h1>
-    <p class="lede">Three draft texts for Sarus Operation Planner 1.0.0: terms of use, a privacy notice and a safety disclaimer. Each is followed by notes for counsel that explain the technical facts behind it and the open questions.</p>
+    <p class="lede">Three draft texts for Sarus Operation Planner 1.1.0 and Sarus firmware Sarus-2: terms of use, a privacy notice and a safety disclaimer. Each is followed by notes for counsel that explain the technical facts behind it and the open questions.</p>
     <div class="draft"><strong>Draft · not legal advice</strong><p>Prepared by engineering from the software's actual behaviour. It must be reviewed and adapted by a qualified lawyer before publication. Items in <span class="fill">highlighted brackets</span> need company details.</p></div>
     <nav aria-label="Documents"><a href="#terms">1 · Terms of use</a><a href="#privacy">2 · Privacy notice</a><a href="#safety">3 · Safety disclaimer</a><a href="#facts">Technical facts</a></nav>
   </header>
@@ -75,6 +75,7 @@ footer { margin-top: 56px; padding-top: 12px; border-top: 1px solid var(--line);
       <li>You are the operator of any aircraft you control or configure with the Software, and you are responsible for its safe and lawful operation.</li>
       <li>You must comply with all laws that apply to your flights. In India these include the Drone Rules, 2021, as amended, and the requirements of the Directorate General of Civil Aviation and the Digital Sky platform.</li>
       <li>You must test any configuration, parameter change, mission or firmware on the ground and in a safe area before relying on it.</li>
+      <li>If you hold an admin password for the parameter lock, you must keep it secret and keep a spare in a safe place. Sarus cannot recover a lost password, and an aircraft whose password is lost cannot be reconfigured until its firmware is replaced.</li>
     </ol>
 
     <h3>5. No warranty</h3>
@@ -115,7 +116,7 @@ footer { margin-top: 56px; padding-top: 12px; border-top: 1px solid var(--line);
     <p>Sarus Operation Planner runs on your own computer. No Sarus server receives your flight data, telemetry, logs, missions or parameters; they stay where they are unless you decide to send them to someone.</p>
 
     <h3>What the Software stores on your computer</h3>
-    <p>Settings, telemetry logs, logs downloaded from the flight controller, missions, parameter files and cached map images are kept in <code>Documents\Sarus Operation Planner</code>. A diagnostic log is written to <code>ProgramData\Sarus Operation Planner</code>. Because the logs record the aircraft's GPS position against time, they show where and when you flew, so think before sharing them.</p>
+    <p>Settings, telemetry logs, logs downloaded from the flight controller, missions, parameter files cached map images and the airframe limits you enter are kept in <code>Documents\Sarus Operation Planner</code>. The admin password is never stored, on your computer or anywhere else. A diagnostic log is written to <code>ProgramData\Sarus Operation Planner</code>. Because the logs record the aircraft's GPS position against time, they show where and when you flew, so think before sharing them.</p>
 
     <h3>Internet connections the Software makes</h3>
     <p>When your computer is online, the Software connects to the services below. Each service receives your computer's IP address and the request itself. Sarus does not receive this information.</p>
@@ -141,7 +142,7 @@ footer { margin-top: 56px; padding-top: 12px; border-top: 1px solid var(--line);
 
     <div class="counsel"><strong>Notes for counsel</strong>
       <ul>
-        <li>The table above reflects the source code of version 1.0.0 (checked on 4 October 2026). Sarus itself currently collects nothing. Personal data handling by Sarus arises only from support requests and from any future Sarus server (for example a Sarus firmware server).</li>
+        <li>The table above reflects the source code of version 1.1.0 (checked on 6 October 2026). Sarus itself currently collects nothing. Personal data handling by Sarus arises only from support requests and from any future Sarus server (for example a Sarus firmware server).</li>
         <li>Map tiles are fetched directly from third-party providers chosen by the user, as in Mission Planner. Their terms of service may restrict commercial use; review before selling the Software with aircraft.</li>
         <li>Flight logs may be personal data of the operator, and may be sensitive for defence customers. Consider guidance for customers on log handling.</li>
         <li>If usage statistics are ever turned on by default, consent under DPDPA would be needed first.</li>
@@ -156,14 +157,16 @@ footer { margin-top: 56px; padding-top: 12px; border-top: 1px solid var(--line);
 
     <p><b>Unmanned aircraft can cause serious injury, death and damage to property.</b> Sarus Operation Planner helps you configure and monitor an aircraft. It cannot make an aircraft safe, airworthy or legal to fly.</p>
     <p>The person operating the aircraft is responsible for every flight, automatic modes included. Keep the radio control transmitter in your hands and be ready to take over at any moment.</p>
-    <p>Parameters can crash an aircraft. This Software lets you set values outside the recommended ranges and, after a warning, change parameters marked read-only. It will warn you; it will not stop you. Save a backup before you change anything, and test every change on the ground first. Whenever you calibrate, test motors, install firmware or change parameters, the propellers must be off.</p>
+    <p>Parameters can crash an aircraft. This Software takes parameter values exactly as you enter them, without ArduPilot's recommended ranges, and, after a warning, lets you change parameters marked read-only. The airframe limits and the in-flight alarm are aids: they warn you about values and flight conditions you have described, and they can miss others. They never change a value or take control. The parameter lock controls who may change an aircraft's setup; it does not make a setup safe. Save a backup before you change anything, and test every change on the ground first. Whenever you calibrate, test motors, install firmware or change parameters, the propellers must be off.</p>
     <p>Telemetry, maps, elevation, airspace and traffic information can arrive late, be incomplete or be plain wrong. Never rely on them alone to keep clear of terrain, obstacles, people or other aircraft. Radio links fail too, which is why failsafe actions for loss of radio control, telemetry and GPS, and for a low battery, have to be set up and tested.</p>
     <p>Register and fly as the Drone Rules, 2021 (as amended), the DGCA and the Digital Sky platform require, including airspace zones, permissions, pilot certification and the Unique Identification Number. Outside India, the law of the country where you fly applies.</p>
     <p>Sarus tested this version in ArduPilot's simulator. Before operational use, test it with your own aircraft, flight controller and radios, first on the bench and then in a controlled first flight.</p>
 
     <div class="counsel"><strong>Notes for counsel</strong>
       <ul>
-        <li>Point 2 describes deliberate Sarus features (non-blocking range warnings, editable read-only parameters). The disclaimer should make clear that these are the operator's choice.</li>
+        <li>Point 2 describes deliberate Sarus features (values taken as typed, editable read-only parameters). The disclaimer should make clear that these are the operator's choice.</li>
+        <li>The in-flight alarm continues the mission when nobody answers within 15 seconds, as the owner specified. Counsel may want the disclaimer to state that default explicitly.</li>
+        <li>The parameter lock runs in GPL v3 firmware whose source is public; its security rests on the owner's password, not on secrecy, so it does not restrict anyone's GPL rights. A secure bootloader that accepts only Sarus-signed firmware is planned. For aircraft sold as consumer products, GPL v3 section 6 then requires giving buyers the installation information needed to run modified firmware. Please advise whether Sarus aircraft are consumer products under that definition before the secure bootloader ships.</li>
         <li>Consider whether a "click to accept" on first start is wanted. Technically it can be added without restricting GPL rights.</li>
         <li>Product-liability exposure is mainly tied to aircraft that Sarus sells with this software. Consider aligning this text with the aircraft's sale contract and manual.</li>
       </ul>
@@ -179,11 +182,12 @@ footer { margin-top: 56px; padding-top: 12px; border-top: 1px solid var(--line);
         <tr><td>Source code</td><td>Public: github.com/LikhitS/SarusOperationPlanner (personal GitHub account; consider moving to a company account).</td></tr>
         <tr><td>Installer contents</td><td>Also installs Mission Planner's USB drivers and adds their signing certificate ("Michael Oborne") to the machine's trusted root certificates, as Mission Planner does.</td></tr>
         <tr><td>Code signing</td><td>Not yet signed. A D-U-N-S number and an Organisation Validated certificate are being obtained.</td></tr>
-        <tr><td>Data collected by Sarus</td><td>None in version 1.0.0.</td></tr>
+        <tr><td>Data collected by Sarus</td><td>None in version 1.1.0.</td></tr>
+        <tr><td>Parameter lock</td><td>Ed25519 public keys in the firmware and the program; private keys derived from the owner's password with scrypt when it is typed and kept only in memory. No password or private key is stored or sent anywhere.</td></tr>
         <tr><td>Usage statistics</td><td>Google Analytics code inherited from Mission Planner, switched off by default.</td></tr>
       </tbody>
     </table></div>
   </article>
 
-  <footer>Sarus Aerospace Pvt Ltd · draft for legal review · Sarus Operation Planner 1.0.0 · 4 October 2026</footer>
+  <footer>Sarus Aerospace Pvt Ltd · draft for legal review · Sarus Operation Planner 1.1.0 · 6 October 2026</footer>
 </div>

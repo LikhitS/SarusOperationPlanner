@@ -1,6 +1,6 @@
+<!-- lint-allow: unlock -->
 <title>Sarus Firmware Plan</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600;700&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&family=JetBrains+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="../pdf/fonts.css">
 <style>
 /* Layout: a plan document — summary, how it fits, phases as a numbered track, decisions table, risks */
 :root {
@@ -51,52 +51,76 @@ th { font: 600 11.5px/1.2 var(--mono); letter-spacing: .06em; text-transform: up
 .pill { font: 600 11px/1 var(--mono); letter-spacing: .06em; text-transform: uppercase; padding: 3px 6px; border: 1px solid currentColor; white-space: nowrap; }
 .you { color: var(--brand); } .me { color: var(--accent); }
 footer { margin-top: 56px; padding-top: 12px; border-top: 1px solid var(--line); color: var(--muted); font-size: .9rem; }
+@media print { h2 { break-after: avoid; } .flow, .callout, .tbl { break-inside: avoid; } }
 </style>
 
 <div class="wrap">
   <header>
     <span class="eyebrow">Sarus Aerospace · firmware · status and plan</span>
     <h1>Sarus Firmware Plan</h1>
-    <p class="lede">How Sarus builds its own ArduPilot firmware for Plane (QuadPlane included), Copter and Rover, how a release reaches the Install Firmware page, and what has been done so far.</p>
+    <p class="lede">How Sarus builds its own ArduPilot firmware for Plane (QuadPlane included), Copter and Rover, what the second release adds, how a release reaches the Install Firmware page, and what comes next.</p>
   </header>
 
   <h2><span class="n">01</span>Where it stands</h2>
-  <p>The fork exists. It lives at <a href="https://github.com/LikhitS/ardupilot">github.com/LikhitS/ardupilot</a> on the branch <code>sarus-4.7.1</code>, which starts from ArduPilot's stable 4.7.1 release. Plane, Copter and Rover 4.7.1 are one and the same commit, so a single branch covers all three.</p>
-  <p>So far the only change to the firmware itself is its name. It now reports <code>ArduPlane V4.7.1 Sarus-1</code>, and likewise for Copter and Rover. Flight behaviour is identical to ArduPilot 4.7.1. The <code>ArduPlane V</code> prefix stays deliberately: ground stations, Sarus Operation Planner included, use it to recognise the vehicle type, and if it were missing the program could treat a QuadPlane as a Copter and offer the wrong flight modes.</p>
-  <p>GitHub's cloud machines build the firmware for seven board families: CubeOrange, CubeOrangePlus, Pixhawk6X, Pixhawk6C, Pixhawk1, fmuv3 and MatekH743. Every build is checked for the Sarus name. The same run produces the Windows simulator, so the Sarus firmware can be flown in the simulator by the ground-station test harness. It has been: QuadPlane, Copter and Rover flights, the parameter editor checks, shortcuts under load and a sweep of every QuadPlane parameter all passed on the Sarus build.</p>
+  <p>Sarus firmware now comes in two lines. The 4.7 line lives on the branch <code>sarus-4.7.1</code> of github.com/LikhitS/ardupilot and starts from ArduPilot's stable 4.7.1, where Plane, Copter and Rover share one commit. The 4.6 line lives on <code>sarus-4.6.3</code> and starts from Copter 4.6.3. That commit is Plane 4.6.3 and Rover 4.6.3 plus a one-line fix to Copter's version file, so all three vehicles are built from exactly their official 4.6.3 source.</p>
+  <p>The first release, Sarus-1, changed only the name. The second, Sarus-2, is the same on both lines and adds two things. The parameter lock refuses setup changes from any ground station until it proves it holds the owner's admin password; flying stays open to everyone. The firmware also gains room for the owner's parameter set as its defaults. The aircraft identify themselves as, for example, <code>ArduPlane V4.7.1 Sarus-2</code> or <code>ArduCopter V4.6.3 Sarus-2</code>; the <code>Ardu… V</code> prefix stays because ground stations use it to tell a QuadPlane from a Copter.</p>
+  <p>GitHub's cloud machines build both lines for seven board families: CubeOrange, CubeOrangePlus, Pixhawk6X, Pixhawk6C, Pixhawk1, fmuv3 and MatekH743. All 42 board builds of Sarus-2 compile and pass their checks.</p>
 
-  <h2><span class="n">02</span>From a release to the Install Firmware page</h2>
-  <div class="flow">
-    <div><b>Tag</b><code>sarus-v4.7.1-S1</code> pushed to the fork</div>
-    <div><b>Cloud build</b>all boards plus the Windows simulator</div>
-    <div><b>Release</b>files named <code>Sarus-Plane-4.7.1-S1-CubeOrange.apj</code> and so on</div>
-    <div><b>Firmware list</b><code>manifest.json</code> on the <code>sarus-manifest</code> branch</div>
-    <div><b>Sarus Planner</b>reads it at start-up next to ArduPilot's list</div>
+  <h2><span class="n">02</span>The parameter lock</h2>
+  <p>While locked, the aircraft refuses parameter writes and sends back the value it keeps, and it refuses parameter resets, every calibration, reboot into the bootloader, bootloader flashing, SD card formatting, receiver pairing, Lua scripting commands, OSD parameter changes, MAVLink signing setup and any file write over MAVLink FTP. FTP writes are included because a parameter file written there loads parameters, and a script copied there can set them. A plain reboot, missions, modes, arming and flying stay open.</p>
+  <p>The aircraft holds only Ed25519 public keys: the owner's key and a spare, both created on the owner's PC on 6 October 2026. The private key behind each one is derived from its password with scrypt and exists only inside Sarus Operation Planner while someone who typed the password has it unlocked. To unlock, Sarus asks the aircraft for a one-time number and returns it signed. A number is good for one attempt, for 30 seconds, from the station and link that asked for it, so a recorded unlock cannot be replayed. The unlock belongs to that station on that link. It ends on reboot, on a lock request, or after 10 seconds of silence once disarmed; it is never cut off in flight, but a new one is refused while armed.</p>
+  <div class="callout warn"><strong class="t">What the lock does not cover</strong>
+    <p>Someone with the board on a bench can still flash other firmware through the USB bootloader. Closing that gap needs ArduPilot's secure bootloader with a Sarus signing key, the next step below. Settings inside DroneCAN peripherals are not covered either.</p>
   </div>
-  <p>The firmware list is made by ArduPilot's own manifest script, unchanged, so board IDs, USB IDs and bootloader names are exactly the ones ArduPilot publishes. We compared six entries field by field with ArduPilot's official list and found no difference except the download address. When a board matches both an ArduPilot and a Sarus build, Install Firmware opens the selection window Mission Planner already has, and the Sarus files are easy to spot by name. No new buttons were needed.</p>
-  <p>The program loads the list when it starts. A new Sarus release therefore appears the next time Sarus Operation Planner is opened.</p>
 
-  <h2><span class="n">03</span>Next steps</h2>
-  <p>The first release, <code>sarus-v4.7.1-S1</code>, went out on 4 October 2026 with 21 firmware files and the Windows simulator, at <a href="https://github.com/LikhitS/ardupilot/releases/tag/sarus-v4.7.1-S1">github.com/LikhitS/ardupilot/releases</a>. Sarus Operation Planner picks up all 21 entries when it starts. Next, your team flashes the Sarus build on real boards and runs the Field Test Checklist, starting with this identity-only version so that any problem cannot come from a behaviour change.</p>
-  <p>Behaviour changes come only after that, and one per release. The parameter sweeps have already suggested where to start. <code>EK3_BCN_DELAY</code>, <code>EK3_FLOW_DELAY</code> and <code>LAND_THR_SLEW</code> are stored in 8 bits and stop at 127 although their documentation allows more. <code>Q_LOIT_ACC_MAX_M</code> and <code>LOIT_ACC_MAX_M</code> are accepted and then limited inside the firmware. Your flight team will find others. Each change gets its own commit, simulator results from before and after, an entry in <code>SARUS.md</code> and your sign-off.</p>
-  <div class="callout warn"><strong class="t">Safety</strong>
-    <p>Many of ArduPilot's limits protect the aircraft: angle, acceleration and throttle slew limits among them. Removing one moves that protection to the pilot and the tuning. That is the reason for going one limit at a time, with evidence, and never in the first release.</p>
-  </div>
-  <p>Later, the build can grow from seven board families to everything ArduPilot supports, about 1,100 firmware files per release. That is more than one GitHub release can hold, so it would become one release per vehicle type.</p>
-
-  <h2><span class="n">04</span>Decisions taken</h2>
+  <h2><span class="n">03</span>How it was tested</h2>
   <div class="tbl"><table>
+    <thead><tr><th>Test</th><th>Where</th><th>Result</th></tr></thead>
     <tbody>
-      <tr><td>Boards</td><td>The seven families above first, then every board Mission Planner offers</td></tr>
-      <tr><td>Install Firmware</td><td>Sarus builds listed together with ArduPilot's, with no new buttons</td></tr>
-      <tr><td>Repository</td><td>Public fork under LikhitS for now, to move to a company account later</td></tr>
-      <tr><td>Version names</td><td>ArduPilot version plus a Sarus build number, e.g. 4.7.1-S1, so the base is always visible</td></tr>
-      <tr><td>Release types</td><td>Stable (<code>sarus-v4.7.1-S1</code>) and beta (<code>sarus-v4.7.1-S1-beta</code>)</td></tr>
+      <tr><td>Ed25519 check against the RFC 8032 vectors and signatures from an independent library</td><td>Cloud, every push</td><td>13 of 13</td></tr>
+      <tr><td>Lock on the simulator with the public test key: refusals, wrong keys, replays, other stations and links, arming, silence, reboot</td><td>Cloud, both lines</td><td>35 of 35 on each</td></tr>
+      <tr><td>Release build: locked from the first boot, test key and random keys refused</td><td>Cloud, both lines</td><td>Added with the owner keys</td></tr>
+      <tr><td>Sarus Operation Planner against the real firmware: its signatures accepted, a write that skips the program refused</td><td>This PC, 4.6.3 and 4.7.1</td><td>18 of 18</td></tr>
+      <tr><td>Full regression of the planner on Sarus-2 4.7.1, every QuadPlane and Rover parameter written, read back and restored</td><td>This PC</td><td>16 of 16 steps</td></tr>
+      <tr><td>Copter, Rover, QuadPlane alarm flight on Sarus-2 4.6.3</td><td>This PC</td><td>All passed</td></tr>
     </tbody>
   </table></div>
 
-  <h2><span class="n">05</span>Licensing</h2>
-  <p>ArduPilot is licensed under the GPL version 3. Sarus firmware may be sold or supplied with aircraft, provided that anyone who receives it can get the complete source of the build they received. The public fork does that. Saying the firmware is based on ArduPilot is fine; suggesting ArduPilot endorses it is not.</p>
+  <h2><span class="n">04</span>The firmware's own limits</h2>
+  <p>The request was to stop the firmware overriding values the owner sets. We wrote every parameter of QuadPlane, Copter and Rover, about 3,000, to the simulator and compared what each aircraft kept. Only one is a genuine limit. Loiter acceleration (<code>LOIT_ACC_MAX_M</code>, <code>Q_LOIT_ACC_MAX_M</code>) is capped at g·tan(maximum lean angle), because a multirotor tilted to 30 degrees can only accelerate sideways at about 5.66 m/s² without losing height. Raising the cap would not make the aircraft faster; it would only make the controller ask for something it cannot do. The other differences are values the firmware measures itself (barometer ground pressure, device IDs, mission count) and parameters stored in 8 bits, which stop at 127. Changing their storage would scramble the parameters of every aircraft already flying.</p>
+  <p>So Sarus-2 removes no limit. The ground station instead shows the value the aircraft actually holds after every write, and the new airframe limits page flags values beyond what the airframe can do, without changing them.</p>
 
-  <footer>Sarus Aerospace Pvt Ltd · firmware status and plan · 4 October 2026 · base ArduPilot 4.7.1 stable</footer>
+  <h2><span class="n">05</span>The owner's parameter set as defaults</h2>
+  <p>Most boards have no room for embedded defaults, so every Sarus board build now reserves 8 KB for them. When the owner's file is placed in <code>Tools/sarus/defaults</code> as <code>plane.parm</code>, <code>copter.parm</code> or <code>rover.parm</code>, each build merges it into the firmware: a new board, a parameter reset or a firmware install then starts from the owner's values, and where a board ships defaults of its own, the owner's value wins. Values that belong to one aircraft (sensor calibrations, device IDs, radio calibration, barometer ground pressure) are dropped automatically, and a file too large for the firmware stops the build with a message. Every board build also proves the merge on a scratch copy. The owner's files have not been supplied yet; until they are, the firmware starts from ArduPilot's defaults.</p>
+
+  <h2><span class="n">06</span>From a release to the Install Firmware page</h2>
+  <div class="flow">
+    <div><b>Tag</b><code>sarus-v4.7.1-S2</code> or <code>sarus-v4.6.3-S2</code></div>
+    <div><b>Cloud build</b>all boards, lock tests, Windows simulators</div>
+    <div><b>Release</b>files named <code>Sarus-Plane-4.7.1-S2-CubeOrange.apj</code> and so on</div>
+    <div><b>Firmware list</b><code>manifest.json</code> on <code>sarus-manifest</code>, one release per line</div>
+    <div><b>Sarus Planner</b>reads it at start-up next to ArduPilot's list</div>
+  </div>
+  <p>The firmware list is made by ArduPilot's own manifest script, unchanged, so board IDs, USB IDs and bootloader names are exactly the ones ArduPilot publishes. The list keeps one current release per type and version line, so publishing for 4.6 never removes 4.7. When a board matches several builds, Install Firmware opens the selection window Mission Planner already has. The release step refuses to publish firmware that carries no owner key, so the lock can never ship switched off.</p>
+
+  <h2><span class="n">07</span>Next steps</h2>
+  <p>First, the owner tries the password on a simulator built with the owner keys, using <code>tests\try-your-password.ps1</code>; nobody else can, because nobody else knows it. Then both lines are tagged as Sarus-2 releases. After that the team flashes real boards and runs the Field Test Checklist, which now includes the lock, the airframe limits and the alarm.</p>
+  <p>Later steps, each with simulator evidence and a sign-off: the secure bootloader so that only Sarus-signed firmware runs; the owner's default parameter files; and more board families, up to everything ArduPilot supports, which would mean one release per vehicle type because of GitHub's size limits.</p>
+
+  <h2><span class="n">08</span>Decisions taken</h2>
+  <div class="tbl"><table>
+    <tbody>
+      <tr><td>Lines</td><td>Two, 4.7.1 and 4.6.3, with identical Sarus changes; the planner offers both</td></tr>
+      <tr><td>Lock</td><td>In the firmware, with Ed25519 keys from the owner's password, rather than MAVLink signing, which would also stop people without the password from flying</td></tr>
+      <tr><td>Keys</td><td>Owner key and a spare; public keys in the repository, passwords nowhere</td></tr>
+      <tr><td>Firmware limits</td><td>None removed: the only real one is physics; values the aircraft changes are shown instead</td></tr>
+      <tr><td>Version names</td><td>ArduPilot version plus the Sarus release, e.g. 4.6.3-S2</td></tr>
+      <tr><td>Repository</td><td>Public fork under LikhitS for now, to move to a company account later</td></tr>
+    </tbody>
+  </table></div>
+
+  <h2><span class="n">09</span>Licensing</h2>
+  <p>ArduPilot is licensed under the GPL version 3. Sarus firmware may be sold or supplied with aircraft, provided anyone who receives it can get the complete source of the build they received; the public fork does that. The lock's source is public too, and its security rests on the owner's password, not on the code being secret. Saying the firmware is based on ArduPilot is fine; suggesting ArduPilot endorses it is not.</p>
+
+  <footer>Sarus Aerospace Pvt Ltd · firmware status and plan · 6 October 2026 · Sarus-2 on ArduPilot 4.7.1 and 4.6.3</footer>
 </div>
