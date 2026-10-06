@@ -401,6 +401,21 @@ namespace MissionPlanner.Utilities
                     /////////////////////////////////////////////////////////////////
                     else if (url.Contains(" /websocket/raw") || url.Contains(" / ") && head.Contains("Upgrade: websocket"))
                     {
+                        // Sarus: this connection passes raw MAVLink straight to the aircraft. Accept it only from
+                        // this PC and not from cross-site browser pages, as Mission Planner already does for the
+                        // guided-mode commands; otherwise any device on the same network could command the aircraft.
+                        var remoteRawEp = client.Client.RemoteEndPoint as System.Net.IPEndPoint;
+                        if (remoteRawEp == null || !IPAddress.IsLoopback(remoteRawEp.Address) ||
+                            IsCrossSiteRequest(head))
+                        {
+                            log.Info("Rejected raw MAVLink websocket from " + remoteRawEp);
+                            string rejectHeader = "HTTP/1.1 403 Forbidden\r\n\r\nForbidden";
+                            byte[] rejectTemp = asciiEncoding.GetBytes(rejectHeader);
+                            stream.Write(rejectTemp, 0, rejectTemp.Length);
+                            stream.Close();
+                            return;
+                        }
+
                         using (var writer = new StreamWriter(stream, Encoding.ASCII))
                         {
                             writer.WriteLine("HTTP/1.1 101 WebSocket Protocol Handshake");

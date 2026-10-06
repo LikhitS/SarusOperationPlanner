@@ -70,7 +70,7 @@ jobs:
           $w = "$env:RUNNER_TEMP\wix"
           Push-Location Msi
           & .\net472\wix.exe "$env:GITHUB_WORKSPACE\stage\SarusOperationPlanner" SarusOperationPlanner
-          $ext = @('-ext','WiXNetFxExtension','-ext','WixDifxAppExtension','-ext','WixUIExtension.dll','-ext','WixUtilExtension','-ext','WixIisExtension')
+          $ext = @('-ext','WiXNetFxExtension','-ext','WixDifxAppExtension','-ext','WixUIExtension.dll','-ext','WixUtilExtension','-ext','WixIisExtension','-ext','WixFirewallExtension')
           & "$w\candle.exe" -nologo installer.wxs @ext
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           $ver = (Get-Item "$env:GITHUB_WORKSPACE\stage\SarusOperationPlanner\MissionPlanner.exe").VersionInfo.FileVersion
@@ -144,6 +144,13 @@ jobs:
             if (-not (Test-Path "${env:ProgramFiles(x86)}\Sarus Operation Planner\docs\$d")) { throw "docs\$d missing" }
           }
           if (-not ($lnk | Where-Object Name -eq 'Sarus Operation Planner User Manual.lnk')) { throw "manual shortcut missing" }
+          # Altitude Angel is not shipped
+          $aa = Get-ChildItem "${env:ProgramFiles(x86)}\Sarus Operation Planner" -Recurse -Filter "AltitudeAngel*" -ErrorAction SilentlyContinue
+          if ($aa) { $aa.FullName; throw "Altitude Angel files were installed" }
+          # the installer allows the program on every network type, so Windows never shows the firewall prompt
+          $fw = Get-NetFirewallApplicationFilter | Where-Object Program -eq $exe | Get-NetFirewallRule
+          $fw | Format-Table DisplayName, Direction, Action, Profile, Enabled -AutoSize | Out-String | Write-Host
+          if (-not ($fw | Where-Object { $_.Action -eq 'Allow' -and $_.Direction -eq 'Inbound' -and $_.Enabled -eq 'True' -and $_.Profile -eq 'Any' })) { throw "firewall rule for all networks missing" }
 
       - name: Start Sarus and keep it running
         shell: pwsh
@@ -165,6 +172,8 @@ jobs:
           $code = (Get-ItemProperty 'HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*','HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall\*' -ErrorAction SilentlyContinue |
             Where-Object DisplayName -eq 'Sarus Operation Planner').PSChildName
           $p = Start-Process msiexec -ArgumentList '/x',$code,'/qn','/norestart' -Wait -PassThru
+          $exe = "${env:ProgramFiles(x86)}\Sarus Operation Planner\MissionPlanner.exe"
+          if (Get-NetFirewallApplicationFilter | Where-Object Program -eq $exe) { throw "firewall rule left behind after uninstall" }
           "Sarus uninstall exit $($p.ExitCode)"
           if (Test-Path "${env:ProgramFiles(x86)}\Sarus Operation Planner\MissionPlanner.exe") { throw "Sarus files left behind" }
           if (-not (Test-Path "${env:ProgramFiles(x86)}\Mission Planner\MissionPlanner.exe")) { throw "Uninstalling Sarus removed Mission Planner" }
