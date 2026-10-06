@@ -430,6 +430,13 @@ static class Harness
             if (bsv == null) { Check(false, "pages: backstage found for " + label); continue; }
             var pages = Enumerable.Range(0, bsv.Pages.Count).Select(i => bsv.Pages[i]).Where(p => p.Show).ToList();
             Info("pages", $"{label}: {pages.Count} visible pages");
+            // Sarus: suggested values are not offered, and the airframe limits page is
+            if (label == "setup")
+                Check(!pages.Any(p => p.Page is MissionPlanner.GCSViews.ConfigurationView.ConfigInitialParams),
+                    "pages: Initial Tune Parameters not offered");
+            if (label == "config")
+                Check(pages.Any(p => p.Page is MissionPlanner.GCSViews.ConfigurationView.ConfigSarusLimits),
+                    "pages: Airframe Limits offered");
             int idx = 0;
             foreach (var page in pages)
             {
@@ -630,7 +637,7 @@ static class Harness
             System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
         var amber = System.Drawing.Color.FromArgb(0xF0, 0xA6, 0x30);
 
-        // A. Out of range: accepted without a prompt, flagged amber, written as entered
+        // A. Outside ArduPilot's recommended range: accepted without a prompt or flag, written as entered
         {
             string p = roverProfile ? "ATC_STR_RAT_P" : "TECS_CLMB_MAX";
             double outOfRange = roverProfile ? 50 : 1000;
@@ -640,15 +647,17 @@ static class Harness
             c.Value = outOfRange.ToString(System.Globalization.CultureInfo.CurrentCulture);
             await Task.Delay(800);
             Check(dialogLog.Count == dialogsBefore, "out-of-range value: no blocking prompt");
-            Check(c.Style.BackColor.ToArgb() == amber.ToArgb(), "out-of-range value: cell flagged amber");
-            Check((c.ToolTipText ?? "").StartsWith("WARNING: Outside"), "out-of-range value: warning tooltip", c.ToolTipText?.Split('\n')[0]);
+            Check(c.Style.BackColor.ToArgb() != amber.ToArgb() && !(c.ToolTipText ?? "").StartsWith("WARNING: Outside"),
+                "out-of-range value: no recommended-range flag (suggestions hidden)", c.ToolTipText?.Split('\n')[0]);
+            var opt = c.OwningRow.Cells["Options"].Value?.ToString() ?? "";
+            Check(!opt.Contains(" "), "options column shows no recommended range", opt.Replace("\n", " | "));
             expectedDialogs.Add(("You are about to change", "yes"));
             expectedDialogs.Add(("successfully saved", "ok"));
             write.Invoke(raw, new object[] { null, EventArgs.Empty });
             await Task.Delay(1000);
             Check(Math.Abs(mav.param[p].Value - outOfRange) < 1e-3, "out-of-range value written to aircraft", $"{p} {mav.param[p].Value}");
-            Check(c.Style.BackColor.ToArgb() != amber.ToArgb() && !(c.ToolTipText ?? "").StartsWith("WARNING"),
-                "out-of-range value: warning cleared after successful write");
+            var presaved = raw.Controls.Find("BUT_paramfileload", true);
+            Check(presaved.Length == 1 && !presaved[0].Visible, "Load Presaved not offered");
             port.setParam(mav.sysid, mav.compid, p, orig);
         }
 
@@ -742,6 +751,252 @@ static class Harness
         host.Close();
     }
 
+    // The Sarus parameter lock end to end: the app's gate, the password, the C# signature against the firmware's
+    // check, a key the aircraft does not know, a write that skips the app, and locking again. Leaves app and
+    // aircraft unlocked so the rest of the run can change parameters.
+    static async Task LockChecks(MAVLinkInterface port, MAVState mav, uint sid, byte cid)
+    {
+        // public simulator test key (Sarus firmware Tools/sarus/lock_keys.py)
+        const string testSalt = "53415255532d53494c2d544553542d31";
+        var testKey = new SarusLock.Key("sitl-test", testSalt, "d1f488e0ce6cb0972c44b8ed72317878aa878e8f3677e17d9023b325c5fe9b9b");
+        // the C# derivation must give the same key as the Python one
+        Check(SarusLock.ToHex(SarusLock.Derive("sarus-sitl-test", SarusLock.FromHex(testSalt)).GeneratePublicKey().GetEncoded())
+              == SarusLock.ToHex(testKey.PublicKey), "lock: C# key derivation matches the firmware tools");
+
+        SarusLock.UseKeys(new[] { testKey });
+        var asked = new List<string>();
+        SarusLock.RequestUnlock = what => { asked.Add(what); return false; }; // a user pressing Cancel
+        Check(SarusLock.Configured && !SarusLock.Unlocked, "lock: app locked once it holds a key");
+
+        var flags = await port.SarusLockStatusAsync(sid, cid);
+        Check(flags != null && (flags.Value & SarusLock.FLAG_ACTIVE) != 0 && (flags.Value & SarusLock.FLAG_UNLOCKED) == 0,
+            "lock: aircraft reports its lock active and locked", $"flags {flags}");
+
+        const string name = "LOG_DISARMED";
+        double orig = mav.param[name].Value, target = orig == 0 ? 1 : 0;
+        bool ok = port.setParam(sid, cid, name, target);
+        Check(!ok && asked.Count == 1, "lock: app refuses a parameter write and asks for the password", string.Join(",", asked));
+        Check(Math.Abs(port.GetParam(sid, cid, name) - orig) < 1e-3, "lock: aircraft value unchanged");
+        Check(!port.doCommand(sid, cid, MAVLink.MAV_CMD.PREFLIGHT_STORAGE, 2, 0, 0, 0, 0, 0, 0),
+            "lock: parameter reset refused by the app");
+
+        // a station that skips the app's gate is refused by the aircraft itself
+        var raw = new MAVLink.mavlink_param_set_t
+        {
+            target_system = (byte) sid, target_component = cid, param_value = (float) target,
+            param_type = (byte) MAVLink.MAV_PARAM_TYPE.REAL32,
+            param_id = System.Text.Encoding.ASCII.GetBytes(name.PadRight(16, '\0'))
+        };
+        port.sendPacket(raw, sid, cid);
+        await Task.Delay(2000);
+        Check(Math.Abs(port.GetParam(sid, cid, name) - orig) < 1e-3, "lock: aircraft refuses a write that skips the app");
+
+        Check(!SarusLock.TryUnlock("not the password"), "lock: wrong password refused");
+
+        // the right password typed at the prompt: the app unlocks, then the aircraft, then the write goes through
+        SarusLock.RequestUnlock = what => SarusLock.TryUnlock("sarus-sitl-test") && Unlock();
+        ok = port.setParam(sid, cid, name, target);
+        Check(ok && SarusLock.Unlocked, "lock: right password unlocks the app");
+        Check(Math.Abs(port.GetParam(sid, cid, name) - target) < 1e-3, "lock: write reaches the unlocked aircraft",
+            $"{name} {orig} -> {target}");
+        flags = await port.SarusLockStatusAsync(sid, cid);
+        Check(flags != null && (flags.Value & SarusLock.FLAG_UNLOCKED_BY_YOU) != 0, "lock: aircraft unlocked by this station",
+            $"flags {flags}");
+
+        // locking the app locks the aircraft too
+        SarusLock.Lock();
+        Check(await WaitFor(() =>
+            {
+                var s = port.SarusLockStatusAsync(sid, cid).Result;
+                return s != null && (s.Value & SarusLock.FLAG_UNLOCKED) == 0;
+            }, 10), "lock: locking the app locks the aircraft");
+        SarusLock.RequestUnlock = null;
+        Check(!port.setParam(sid, cid, name, orig), "lock: writes refused again after locking");
+
+        // an app key the aircraft does not know: the app unlocks, the aircraft refuses and the user is told
+        var otherSalt = new byte[16];
+        var other = new SarusLock.Key("other", SarusLock.ToHex(otherSalt),
+            SarusLock.ToHex(SarusLock.Derive("other-password", otherSalt).GeneratePublicKey().GetEncoded()));
+        SarusLock.UseKeys(new[] { other });
+        int dl = dialogLog.Count;
+        expectedDialogs.Add(("refused the unlock", "ok"));
+        Check(SarusLock.TryUnlock("other-password"), "lock: app unlocks with its own key");
+        SarusLockUI.UnlockAllAircraft();
+        Check(await WaitFor(() => dialogLog.Skip(dl).Any(d => d.Contains("refused the unlock")), 10),
+            "lock: user told when the aircraft refuses the app's key");
+        port.setParam(sid, cid, name, orig);
+        Check(Math.Abs(port.GetParam(sid, cid, name) - target) < 1e-3, "lock: that aircraft keeps its value");
+
+        // back to the test key, unlocked, parameter restored
+        SarusLock.UseKeys(new[] { testKey });
+        Check(SarusLock.TryUnlock("sarus-sitl-test") && Unlock(), "lock: unlocked again for the remaining checks");
+        port.setParam(sid, cid, name, orig);
+        Check(Math.Abs(port.GetParam(sid, cid, name) - orig) < 1e-3, "lock: parameter restored", $"{name} {orig}");
+    }
+
+    // Airframe limits: the rules (both ArduPilot 4.6 and 4.7 names), storage, the page, and the blinking banner
+    static async Task LimitsChecks(MAVLinkInterface port, MAVState mav, uint sid, byte cid)
+    {
+        var K = SarusEnvelope.Kind.Plane;
+        var e = new SarusEnvelope { MaxClimb = 5, StallSpeed = 12, MaxPitchDown = 20, MaxTilt = 40, MaxHoverSpeed = 12, MinTurnRadius = 1, MaxBank = 45 };
+        int V(SarusEnvelope.Kind k, string p, double v) => e.Check(k, p, v).Count();
+        Check(V(K, "TECS_CLMB_MAX", 6) == 1 && V(K, "TECS_CLMB_MAX", 5) == 0, "limits: climb rate above the airframe's flagged, equal not");
+        Check(V(K, "AIRSPEED_MIN", 10) == 1 && V(K, "AIRSPEED_MIN", 14) == 0, "limits: minimum airspeed below stall flagged");
+        Check(V(K, "AIRSPEED_STALL", 0) == 0, "limits: AIRSPEED_STALL 0 (automatic) not flagged");
+        Check(V(K, "PTCH_LIM_MIN_DEG", -25) == 1 && V(K, "PTCH_LIM_MIN_DEG", -15) == 0, "limits: nose-down pitch (4.7 name, degrees)");
+        Check(V(K, "LIM_PITCH_MIN", -2500) == 1 && V(K, "LIM_ROLL_CD", 4400) == 0 && V(K, "LIM_ROLL_CD", 4600) == 1,
+            "limits: older centidegree names converted");
+        var C = SarusEnvelope.Kind.Copter;
+        Check(V(C, "ANGLE_MAX", 4500) == 1 && V(C, "ATC_ANGLE_MAX", 35) == 0, "limits: copter lean angle, 4.6 (cdeg) and 4.7 (deg)");
+        Check(V(C, "WPNAV_SPEED", 1500) == 1 && V(C, "WP_SPD", 10) == 0, "limits: copter speed, 4.6 (cm/s) and 4.7 (m/s)");
+        Check(V(C, "PILOT_SPEED_DN", 0) == 0, "limits: 0 meaning 'automatic' not flagged");
+        Check(V(C, "TECS_CLMB_MAX", 100) == 0, "limits: plane rules not applied to a copter");
+        Check(V(SarusEnvelope.Kind.QuadPlane, "Q_ANGLE_MAX", 4100) == 1 && V(SarusEnvelope.Kind.QuadPlane, "Q_A_ANGLE_MAX", 30) == 0,
+            "limits: QuadPlane VTOL lean angle");
+        Check(V(SarusEnvelope.Kind.Rover, "TURN_RADIUS", 0.5) == 1, "limits: rover turn radius below the minimum");
+        Check(new SarusEnvelope().CheckAll(K, new[] { new KeyValuePair<string, double>("TECS_CLMB_MAX", 1000) }).Count == 0,
+            "limits: nothing flagged when no limit is entered");
+        Check(SarusEnvelope.KeyFor("00ab:cd/ef", 1, Firmwares.ArduPlane).All(ch => char.IsLetterOrDigit(ch) || ch == '-' || ch == '_') &&
+              SarusEnvelope.KeyFor("", 3, Firmwares.ArduCopter2) == "sysid3-ArduCopter2", "limits: storage key is a safe file name");
+
+        // live: the connected QuadPlane
+        Check(SarusLimitsUI.KindForCurrent() == SarusEnvelope.Kind.QuadPlane, "limits: connected aircraft recognised as QuadPlane");
+        var key = SarusLimitsUI.KeyForCurrent();
+        Info("limits key", key);
+        double climb = mav.param["TECS_CLMB_MAX"].Value;
+        new SarusEnvelope { MaxClimb = climb - 1 }.Save(key);
+        SarusLimitsUI.Reload();
+        var bannerField = typeof(SarusLimitsUI).GetField("banner", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+        var banner = (System.Windows.Forms.Panel) bannerField.GetValue(null);
+        Check(await WaitFor(() => banner.Visible && SarusLimitsUI.Current.Any(v => v.Param == "TECS_CLMB_MAX"), 5),
+            "limits: banner shows a parameter beyond the airframe", string.Join("; ", SarusLimitsUI.Current));
+        var colours = new HashSet<int>();
+        for (int i = 0; i < 6; i++) { colours.Add(banner.BackColor.ToArgb()); await Task.Delay(250); }
+        Check(colours.Count >= 2, "limits: banner blinks", colours.Count + " colours");
+        Check(Math.Abs(mav.param["TECS_CLMB_MAX"].Value - climb) < 1e-6, "limits: the parameter itself is left as set");
+        Check(SarusLimitsUI.CheckValue("TECS_CLMB_MAX", climb + 3).Count == 1, "limits: a typed value is checked before writing");
+
+        // the page: bad input is refused with a message, good input is stored for this flight controller
+        System.Windows.Forms.Control pageHost = null;
+        MainV2.instance.Invoke((Action) (() =>
+        {
+            var page = new MissionPlanner.GCSViews.ConfigurationView.ConfigSarusLimits();
+            pageHost = new System.Windows.Forms.Form { Width = 800, Height = 900, Text = "limits page test" };
+            page.Dock = System.Windows.Forms.DockStyle.Fill;
+            pageHost.Controls.Add(page);
+            ((System.Windows.Forms.Form) pageHost).Show();
+            page.Activate();
+        }));
+        await Task.Delay(1000);
+        string statusText = null;
+        MainV2.instance.Invoke((Action) (() =>
+        {
+            var page = (MissionPlanner.GCSViews.ConfigurationView.ConfigSarusLimits) pageHost.Controls[0];
+            IEnumerable<System.Windows.Forms.Control> Walk(System.Windows.Forms.Control c) =>
+                new[] { c }.Concat(c.Controls.Cast<System.Windows.Forms.Control>().SelectMany(Walk));
+            var boxes = Walk(page).OfType<System.Windows.Forms.TextBox>().ToList();
+            var climbBox = boxes.First(b => b.AccessibleName == "Maximum climb rate in m/s");
+            var saveBtn = Walk(page).OfType<System.Windows.Forms.Button>().First(b => b.Text == "Save limits");
+            climbBox.Text = "fast";
+            saveBtn.PerformClick();
+            statusText = Walk(page).OfType<System.Windows.Forms.Label>().Select(l => l.Text).FirstOrDefault(t => t.StartsWith("Not saved"));
+            climbBox.Text = "7";
+            saveBtn.PerformClick();
+            pageHost.Dispose();
+        }));
+        Check(statusText != null && statusText.Contains("Maximum climb rate"), "limits page: bad input refused with a reason", statusText);
+        Check(SarusEnvelope.Load(key).MaxClimb == 7, "limits page: limit saved for this flight controller");
+
+        // nothing beyond the limits any more: the banner goes away
+        new SarusEnvelope().Save(key);
+        SarusLimitsUI.Reload();
+        Check(await WaitFor(() => !banner.Visible, 5), "limits: banner hidden once nothing is beyond the limits");
+    }
+
+    // In-flight alarm on a real failure: QuadPlane mission, engine cut in cruise
+    static async Task AlarmFlight(MAVLinkInterface port, MAVState mav, uint sid, byte cid)
+    {
+        var key = SarusLimitsUI.KeyForCurrent();
+        new SarusEnvelope { AlarmAltitudeError = 10, AlarmAirspeedError = 3, AlarmTrackError = 60, AlarmAfterSeconds = 8 }.Save(key);
+        SarusLimitsUI.Reload();
+        var raised = new List<string>();
+        var answers = new List<string>();
+        SarusFlightAlarm.Raised += t => { lock (raised) raised.Add(t); Info("alarm", t.Replace("\n", " | ")); };
+        SarusFlightAlarm.Answered += a => { lock (answers) answers.Add(a); Info("alarm answer", a); };
+
+        // long fixed-wing legs, so the failure happens in cruise and not near take-off or landing
+        double hlat = -35.363261, hlng = 149.165230;
+        var mission = new List<Locationwp>
+        {
+            new Locationwp { id = (ushort) MAVLink.MAV_CMD.WAYPOINT, lat = hlat, lng = hlng, alt = 584, frame = 0 },
+            new Locationwp { id = (ushort) MAVLink.MAV_CMD.VTOL_TAKEOFF, lat = hlat, lng = hlng, alt = 30, frame = 3 },
+            new Locationwp { id = (ushort) MAVLink.MAV_CMD.WAYPOINT, lat = hlat + 0.027, lng = hlng, alt = 60, frame = 3 },
+            new Locationwp { id = (ushort) MAVLink.MAV_CMD.WAYPOINT, lat = hlat + 0.027, lng = hlng + 0.033, alt = 60, frame = 3 },
+            new Locationwp { id = (ushort) MAVLink.MAV_CMD.VTOL_LAND, lat = hlat, lng = hlng, alt = 0, frame = 3 },
+        };
+        await mav_mission.upload(port, mav.sysid, mav.compid, MAVLink.MAV_MISSION_TYPE.MISSION, mission);
+
+        port.setMode(sid, cid, "AUTO");
+        Check(await WaitFor(() => mav.cs.mode.ToUpper() == "AUTO", 10), "alarm flight: mode AUTO", mav.cs.mode);
+        bool armed = false;
+        var armDeadline = DateTime.Now.AddSeconds(150);
+        while (!armed && DateTime.Now < armDeadline)
+        {
+            try { armed = port.doARM(sid, cid, true); } catch { }
+            if (!armed) await Task.Delay(3000);
+        }
+        Check(armed && await WaitFor(() => mav.cs.armed, 5), "alarm flight: armed in AUTO");
+        if (!armed) return;
+
+        Check(await WaitFor(() => mav.cs.alt > 25, 90), "alarm flight: VTOL take-off", $"alt {mav.cs.alt:F1}");
+        Check(await WaitFor(() => mav.cs.airspeed > 15 && mav.cs.wpno == 2, 120), "alarm flight: fixed-wing cruise",
+            $"airspeed {mav.cs.airspeed:F1} wp {mav.cs.wpno}");
+        await Task.Delay(20000);
+        Check(raised.Count == 0, "alarm: silent through a normal take-off, transition and climb", string.Join(" / ", raised));
+
+        // engine out (servo 3, the forward motor, at zero thrust) and no VTOL assist: the aircraft cannot hold its
+        // altitude or airspeed any more
+        // ArduPilot 4.7: SIM_ENGINE_FAIL is a mask of servo outputs; 4.6: it is the index of one output
+        bool ap46 = mav.VersionString.Contains("V4.6");
+        Check(port.setParam(sid, cid, "Q_ASSIST_SPEED", 0) && port.setParam(sid, cid, "SIM_ENGINE_MUL", 0, true) &&
+              port.setParam(sid, cid, "SIM_ENGINE_FAIL", ap46 ? 2 : 4, true), "alarm flight: engine cut in the simulator",
+              ap46 ? "4.6: output index 2" : "4.7: output mask 4");
+        Check(mav.cs.wpno == 2, "alarm flight: still on the long leg when the engine is cut", "wp " + mav.cs.wpno);
+        Check(await WaitFor(() => raised.Count >= 1, 90), "alarm: sounds when the aircraft cannot hold its set values",
+            $"alt err {mav.cs.alt_error:F1} aspd err {mav.cs.aspd_error:F1}");
+        Check(await WaitFor(() => answers.Count >= 1, SarusFlightAlarm.AnswerSeconds + 5) && answers[0] == "continue (no answer)",
+            "alarm: unanswered for 15 s, the mission continues", string.Join(",", answers));
+        Check(mav.cs.mode.ToUpper() == "AUTO", "alarm: mode left in AUTO after no answer", mav.cs.mode);
+
+        // ask again at once, and answer Hold
+        typeof(SarusFlightAlarm).GetField("quietUntil", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)
+            .SetValue(null, DateTime.MinValue);
+        int before = raised.Count;
+        Check(await WaitFor(() => raised.Count > before, 60), "alarm: sounds again while the problem lasts");
+        bool clicked = false;
+        MainV2.instance.Invoke((Action) (() =>
+        {
+            var f = System.Windows.Forms.Application.OpenForms.Cast<System.Windows.Forms.Form>().FirstOrDefault(x => x.Text == "Sarus flight alarm");
+            var hold = f?.Controls.OfType<System.Windows.Forms.Button>().FirstOrDefault(b => b.Text == "Hold position");
+            if (hold != null) { hold.PerformClick(); clicked = true; }
+        }));
+        Check(clicked, "alarm: window offers Hold position");
+        Check(await WaitFor(() => mav.cs.mode.ToUpper() == "LOITER" || mav.cs.mode.ToUpper() == "QLOITER", 10),
+            "alarm: Hold switches the aircraft to loiter", mav.cs.mode);
+
+        // engine back, return home
+        port.setParam(sid, cid, "SIM_ENGINE_MUL", 1, true);
+        port.setParam(sid, cid, "SIM_ENGINE_FAIL", 0, true);
+        port.setMode(sid, cid, "RTL");
+        Check(await WaitFor(() => mav.cs.mode.ToUpper() == "RTL" || mav.cs.mode.ToUpper() == "QRTL", 10), "alarm flight: return home", mav.cs.mode);
+    }
+
+    static bool Unlock()
+    {
+        SarusLockUI.UnlockAllAircraft();
+        return true;
+    }
+
     static async Task Run()
     {
         var port = MainV2.comPort;
@@ -766,6 +1021,19 @@ static class Harness
         {
             // Parameters
             Check(mav.param.Count > 500, "param download", $"{mav.param.Count} params");
+
+            // Sarus parameter lock, against a SITL built with the public test key
+            if (Environment.GetEnvironmentVariable("SARUS_LOCKTEST") == "1")
+                await LockChecks(port, mav, sid, cid);
+            else if (SarusLock.Configured)
+            {
+                // the app carries the owner's keys; the other checks run unlocked with the public test key, which
+                // simulators built with --define=AP_SARUS_LOCK_TEST_KEY also accept (keyless simulators need nothing)
+                SarusLock.UseKeys(new[] { new SarusLock.Key("sitl-test", "53415255532d53494c2d544553542d31",
+                    "d1f488e0ce6cb0972c44b8ed72317878aa878e8f3677e17d9023b325c5fe9b9b") });
+                Check(SarusLock.TryUnlock("sarus-sitl-test"), "lock: harness unlocked with the simulator test key");
+                SarusLockUI.UnlockAllAircraft();
+            }
             if (rover)
                 Check(mav.param.ContainsKey("CRUISE_SPEED") && mav.param.ContainsKey("MODE1"), "rover parameters present");
             else if (copter)
@@ -774,8 +1042,11 @@ static class Harness
                 Check(mav.param.ContainsKey("Q_ENABLE") && mav.param["Q_ENABLE"].Value == 1, "quadplane enabled", "Q_ENABLE=1");
 
             var tuneParams = rover ? new[] { "ATC_STR_RAT_P", "ATC_SPEED_P", "CRUISE_SPEED", "WP_SPEED", "TURN_RADIUS" }
-                                    : copter ? new[] { "ATC_RAT_RLL_P", "ATC_RAT_PIT_P", "PSC_D_ACC_P", "WP_SPD" }
-                                    : new[] { "TECS_CLMB_MAX", "TECS_SINK_MAX", "TECS_TIME_CONST", "Q_A_ANGLE_MAX" };
+                                    : copter ? new[] { "ATC_RAT_RLL_P", "ATC_RAT_PIT_P",
+                                              mav.param.ContainsKey("PSC_D_ACC_P") ? "PSC_D_ACC_P" : "PSC_ACCZ_P", // 4.7 / 4.6 name
+                                              mav.param.ContainsKey("WP_SPD") ? "WP_SPD" : "WPNAV_SPEED" }
+                                    : new[] { "TECS_CLMB_MAX", "TECS_SINK_MAX", "TECS_TIME_CONST",
+                                              mav.param.ContainsKey("Q_A_ANGLE_MAX") ? "Q_A_ANGLE_MAX" : "Q_ANGLE_MAX" }; // 4.7 / 4.6 name
             foreach (var name in tuneParams)
             {
                 Check(mav.param.ContainsKey(name), "param present " + name);
@@ -860,6 +1131,14 @@ static class Harness
 
             // Copter: allow arming in AUTO and taking off without RC throttle (SITL has no RC input)
             if (copter) port.setParam(sid, cid, "AUTO_OPTIONS", 3);
+
+            // Airframe limits and the in-flight alarm fly their own QuadPlane flight
+            if (Environment.GetEnvironmentVariable("SARUS_ALARMTEST") == "1")
+            {
+                await LimitsChecks(port, mav, sid, cid);
+                await AlarmFlight(port, mav, sid, cid);
+                return;
+            }
 
             if (badLink) SetLink("delay:300");
 
