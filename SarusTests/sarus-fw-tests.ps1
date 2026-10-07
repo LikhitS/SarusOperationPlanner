@@ -1,11 +1,11 @@
-# Runs the Sarus Operation Planner checks against SITL built from the Sarus firmware fork (-SimSet Sarus).
+# Runs the Sarus Operation Planner checks against SITL built from the Sarus firmware fork (-SimSet Sarus471).
 # One line per completed step goes to sarus-fw-summary.txt; the firmware must report "... Sarus-1".
 $root = "C:\dev\Sarus"
 $log = "$root\tests\sarus-fw-summary.txt"
 "Sarus firmware SITL tests started $(Get-Date)" | Set-Content $log
 function Clear-SarusEnv { foreach ($v in 'SARUS_QUICK','SARUS_PARAM_SWEEP','SARUS_PARAM_SWEEP_RANGE','SARUS_PARAM_EDITOR_CHECKS','SARUS_SCREEN_THEMES','SARUS_START_THEME','SARUS_PAGES','SARUS_SOAK_MINUTES','SARUS_SHORTCUTS','SARUS_STRESS') { Set-Item "env:$v" "" } }
 function Run($name, $vehicle) {
-    & powershell -ExecutionPolicy Bypass -File "$root\tests\run-sitl-checks.ps1" -Name $name -Vehicle $vehicle -SimSet Sarus | Out-Null
+    & powershell -ExecutionPolicy Bypass -File "$root\tests\run-sitl-checks.ps1" -Name $name -Vehicle $vehicle -SimSet Sarus471 | Out-Null
     $r = Get-Content "$root\tests\report-$name.txt"
     $res = ($r | Select-String 'RESULT').Line
     $ver = (($r | Select-String 'CHECK INFO version') -replace '.*CHECK INFO version\s*', '')

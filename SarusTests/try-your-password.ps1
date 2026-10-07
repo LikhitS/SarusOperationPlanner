@@ -1,11 +1,13 @@
 # Acceptance test for the Sarus parameter lock with the owner's real password.
-# Starts a simulated QuadPlane whose firmware carries the owner keys, then Sarus Operation Planner (the build in
-# bin\Release, which carries the same keys). Nothing here knows the password; you type it into Sarus yourself.
+# Starts a simulated QuadPlane whose firmware carries the owner keys (the Sarus471 set, from CI's locktest build,
+# holds the owner keys and the public test key), then the installed Sarus Operation Planner, or the build in
+# bin\Release if it is not installed. Nothing here knows the password; you type it into Sarus yourself.
 # Usage: powershell -ExecutionPolicy Bypass -File C:\dev\Sarus\tests\try-your-password.ps1
 $ErrorActionPreference = 'Stop'
 $root = "C:\dev\Sarus"
-$sim = "$root\sitl\PlaneSarus471Owner"
-$app = "$root\SarusOperationPlanner\bin\Release\net461\MissionPlanner.exe"
+$sim = "$root\sitl\PlaneSarus471"
+$app = "${env:ProgramFiles(x86)}\Sarus Operation Planner\MissionPlanner.exe"
+if (-not (Test-Path $app)) { $app = "$root\SarusOperationPlanner\bin\Release\net461\MissionPlanner.exe" }
 $run = "$root\sitl\run-owner"
 if (-not (Test-Path "$sim\ArduPlane.exe")) { throw "Owner-key simulator not found in $sim" }
 if (-not (Test-Path $app)) { throw "Sarus build not found: $app" }

@@ -7,7 +7,7 @@ param(
     [ValidateSet("quadplane","copter","rover")][string]$Vehicle = "quadplane",
     [switch]$BadLink,
     # simulator build: Stable = ArduPilot SITL from firmware.ardupilot.org, Sarus = SITL built from the Sarus fork
-    [ValidateSet("Stable","Sarus","Sarus463","Sarus463Lock","Sarus471","Sarus471Lock")][string]$SimSet = "Stable"
+    [ValidateSet("Stable","Sarus463","Sarus463Lock","Sarus471","Sarus471Lock")][string]$SimSet = "Stable"
 )
 $ErrorActionPreference = 'Stop'
 $root = "C:\dev\Sarus"
