@@ -1,6 +1,6 @@
 <!-- lint-allow: unlock -->
 <title>Sarus Operation Planner 1.1.0</title>
-<link rel="stylesheet" href="../pdf/fonts.css">
+<link rel="stylesheet" href="fonts.css">
 <style>
 /* Layout: a single release-notes column with a compact spec rail; aviation-console palette from the Sarus brand */
 :root {
@@ -89,9 +89,12 @@ footer { margin-top: 48px; padding-top: 14px; border-top: 1px solid var(--line);
       </div>
       <p>On CubeOrangePlus, the 4.6 line offers Plane (without Torqeedo boat motors and AIS ship receivers, which a QuadPlane never uses) and Rover; Copter for that board comes from the 4.7 line. Both lines carry the parameter lock and room for the owner's parameter set as firmware defaults, so a new board, a parameter reset or a firmware install starts from the owner's values. Install Firmware lists both lines and asks which one to load.</p>
 
+      <h3>Reviewed before release</h3>
+      <p>Before release, five separate reviews went through the firmware lock, the program's lock and alarm code, the screens, the changes made in 1.0.0, and the tests themselves. Everything they found is fixed in this release. The password prompt no longer remembers what you type; a Mission Planner input box used to save every entry, passwords included, to the settings file. Write Fast no longer stalls on missions longer than ten items. The alarm window can only be answered with a click, names the aircraft, and confirms Hold and Return with the aircraft. When an aircraft locks itself after a reboot or a silent link, Sarus unlocks it again before your next change instead of letting the change be refused. The firmware now also refuses log erasing, serial passthrough, device writes, calibrations started as auxiliary functions, and parameter changes from transmitter menus while locked, and its unlock codes are harder to predict on older flight controllers.</p>
+
       <h2>How 1.1.0 was tested</h2>
-      <p>The full regression ran against Sarus-2 on 4.7.1 in the simulator and passed all 16 steps: the parameter editor, QuadPlane, Copter and Rover missions, the limits and alarm flight, a flight over a poor link, every keyboard shortcut with a concurrency stress test, every SETUP and CONFIG page, and a write, read-back and restore of every QuadPlane and Rover parameter. On 4.6.3 the lock, alarm, Copter and Rover runs passed as well.</p>
-      <p>The lock was tested from both sides. The firmware's own tests check each refusal, wrong keys, replayed and stale unlocks, other stations and links, arming, the silence timeout and reboot: 35 checks on each line. From Sarus, 18 checks confirmed that the program's signatures are accepted by the real firmware and that a write which skips the program is still refused. For the alarm, the simulated engine was cut in cruise. The alarm stayed silent through take-off, transition and climb, sounded 11 to 12 seconds after the cut, let the mission continue when nobody answered, and switched to loiter on Hold.</p>
+      <p>After the review fixes, the full regression ran against Sarus-2 on 4.7.1 in the simulator and passed all 16 steps: the parameter editor, QuadPlane, Copter and Rover missions, the limits and alarm flight, a flight over a poor link, every keyboard shortcut with a concurrency stress test, every SETUP and CONFIG page, and a write, read-back and restore of every QuadPlane and Rover parameter. On 4.6.3 the lock, alarm, Copter and Rover runs passed as well.</p>
+      <p>The lock was tested from both sides. The firmware's own tests check each refusal (parameters, every calibration path, every file-write operation, signing setup), wrong keys, replayed, expired and stolen unlock codes, other stations and links, arming, the silence timeout and reboot: 65 checks on each line, all passed, plus 6 checks that firmware built with the owner's keys refuses the public test key. From Sarus, 53 checks on 4.7.1 and 52 on 4.6.3 confirmed that the program's signatures are accepted by the real firmware and that a write which skips the program is still refused. For the alarm, the simulated engine was cut in cruise. The alarm stayed silent through take-off, transition and climb, sounded 11 to 12 seconds after the cut, let the mission continue when nobody answered, and switched to loiter on Hold.</p>
       <p class="note">All flights were in ArduPilot's simulator. Test with your own aircraft, radios and flight controller on the bench before you fly, and keep the lock password and its spare in a safe place: nobody can recover them.</p>
 
       <h2>What's different from Mission Planner</h2>
@@ -115,10 +118,10 @@ footer { margin-top: 48px; padding-top: 14px; border-top: 1px solid var(--line);
       <p>The update check no longer complains when there is no update yet, and plugins built by an older version are not reused after an upgrade. A lost legacy rally-point request is retried with the right message. Silent installation with <code>msiexec /qn</code> completes instead of hanging on the USB driver wizard.</p>
 
       <h3>Privacy, airspace and coexistence</h3>
-      <p>Usage statistics are off unless you turn them on. Sarus installs beside Mission Planner and keeps its own settings, logs and maps. Mission Planner's Altitude Angel plugin is not included and can never load, so the program places no airspace restrictions on a flight; the aircraft's own geofence and failsafes are untouched. The installer allows the program on every Windows network type, and the built-in web server accepts flight commands only from the PC it runs on.</p>
+      <p>Usage statistics are off unless you turn them on. Sarus installs beside Mission Planner and keeps its own settings, logs and maps. Mission Planner's Altitude Angel plugin is not included and can never load, so the program places no airspace restrictions on a flight; the aircraft's own geofence and failsafes are untouched. The installer allows the program on private and domain networks only, so nobody on public Wi-Fi can reach it, and the built-in web server accepts flight commands only from the PC it runs on.</p>
 
       <h2>Known limitations</h2>
-      <p>This release runs on Windows only. The lock cannot stop someone with the flight controller on a bench from flashing other firmware over USB; a secure bootloader is planned for that. Settings inside DroneCAN peripherals are not covered by the lock. Until the installer is code-signed, Windows may say "Windows protected your PC". Choose More info, then Run anyway.</p>
+      <p>This release runs on Windows only. The lock cannot stop someone with the flight controller on a bench from flashing other firmware over USB; a secure bootloader is planned for that. Settings that other tools write into DroneCAN peripherals are not covered by the lock. On links others can reach, use MAVLink signing as well, because without it the aircraft knows a ground station only by its link and system ID. Until the installer is code-signed, Windows may say "Windows protected your PC". Choose More info, then Run anyway.</p>
     </main>
 
     <aside>

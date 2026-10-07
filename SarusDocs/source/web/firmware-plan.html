@@ -1,6 +1,6 @@
 <!-- lint-allow: unlock -->
 <title>Sarus Firmware Plan</title>
-<link rel="stylesheet" href="../pdf/fonts.css">
+<link rel="stylesheet" href="fonts.css">
 <style>
 /* Layout: a plan document — summary, how it fits, phases as a numbered track, decisions table, risks */
 :root {
@@ -67,7 +67,8 @@ footer { margin-top: 56px; padding-top: 12px; border-top: 1px solid var(--line);
   <p>GitHub's cloud machines build both lines for seven board families: CubeOrange, CubeOrangePlus, Pixhawk6X, Pixhawk6C, Pixhawk1, fmuv3 and MatekH743. One board needed an exception on the 4.6 line. ArduPilot 4.6.3 leaves CubeOrangePlus about 480 bytes of flash for Copter and 12 KB for Plane, and the lock's signature check needs about 13 KB once the owner's keys are in. On that board, at the owner's request, the 4.6.3 VTOL build (Plane) leaves out two marine and ground-vehicle features a QuadPlane never uses, Torqeedo electric boat motors and AIS ship receivers, and then fits with 1 KB to spare. Rover is built in full. Copter is not built for CubeOrangePlus on 4.6.3 until a hover build needs it; the 4.7 line has room for all three on that board.</p>
 
   <h2><span class="n">02</span>The parameter lock</h2>
-  <p>While locked, the aircraft refuses parameter writes and sends back the value it keeps, and it refuses parameter resets, every calibration, reboot into the bootloader, bootloader flashing, SD card formatting, receiver pairing, Lua scripting commands, OSD parameter changes, MAVLink signing setup and any file write over MAVLink FTP. FTP writes are included because a parameter file written there loads parameters, and a script copied there can set them. A plain reboot, missions, modes, arming and flying stay open.</p>
+  <p>While locked, the aircraft refuses parameter writes and sends back the value it keeps, and it refuses parameter resets, every calibration, reboot into the bootloader, bootloader flashing, SD card formatting, receiver pairing, Lua scripting commands, OSD parameter changes, MAVLink signing setup, any file write over MAVLink FTP, log erasing, serial passthrough, device register writes, and the auxiliary functions that save setup (compass calibration, save trim, compass learning, autotune and the like). FTP writes are included because a parameter file written there loads parameters, and a script copied there can set them. Parameter menus on a FrSky or CRSF transmitter work only while a ground station holds an unlock. A plain reboot, missions, modes, arming and flying stay open.</p>
+  <p>Unlock codes mix the board's random source with packet arrival times, the boot count and the previous code, because the older F4 boards (Pixhawk1, fmuv3) have no hardware random generator in use. A station cannot use up or end another station's unlock, and after a failed signature check the next one waits a quarter of a second. Without MAVLink signing the aircraft knows a station only by its link and system ID, so links that others can reach should also use MAVLink signing. The public test key cannot be built into board firmware, and a release is refused unless every image reports the tagged version, holds the owner keys and does not hold the test key.</p>
   <p>The aircraft holds only Ed25519 public keys: the owner's key and a spare, both created on the owner's PC on 6 October 2026. The private key behind each one is derived from its password with scrypt and exists only inside Sarus Operation Planner while someone who typed the password has it unlocked. To unlock, Sarus asks the aircraft for a one-time number and returns it signed. A number is good for one attempt, for 30 seconds, from the station and link that asked for it, so a recorded unlock cannot be replayed. The unlock belongs to that station on that link. It ends on reboot, on a lock request, or after 10 seconds of silence once disarmed; it is never cut off in flight, but a new one is refused while armed.</p>
   <div class="callout warn"><strong class="t">What the lock does not cover</strong>
     <p>Someone with the board on a bench can still flash other firmware through the USB bootloader. Closing that gap needs ArduPilot's secure bootloader with a Sarus signing key, the next step below. Settings inside DroneCAN peripherals are not covered either.</p>
@@ -78,9 +79,9 @@ footer { margin-top: 56px; padding-top: 12px; border-top: 1px solid var(--line);
     <thead><tr><th>Test</th><th>Where</th><th>Result</th></tr></thead>
     <tbody>
       <tr><td>Ed25519 check against the RFC 8032 vectors and signatures from an independent library</td><td>Cloud, every push</td><td>13 of 13</td></tr>
-      <tr><td>Lock on the simulator with the public test key: refusals, wrong keys, replays, other stations and links, arming, silence, reboot</td><td>Cloud, both lines</td><td>35 of 35 on each</td></tr>
-      <tr><td>Release build: locked from the first boot, test key and random keys refused</td><td>Cloud, both lines</td><td>Added with the owner keys</td></tr>
-      <tr><td>Sarus Operation Planner against the real firmware: its signatures accepted, a write that skips the program refused</td><td>This PC, 4.6.3 and 4.7.1</td><td>18 of 18</td></tr>
+      <tr><td>Lock on the simulator with the public test key: every refusal path, wrong keys, replayed, expired and stolen codes, other stations and links, arming, silence, reboot</td><td>Cloud, both lines</td><td>65 of 65 on each</td></tr>
+      <tr><td>Release build: locked from the first boot, test key and random keys refused</td><td>Cloud, both lines</td><td>6 of 6 on each</td></tr>
+      <tr><td>Sarus Operation Planner against the real firmware: its signatures accepted, a write that skips the program refused</td><td>This PC, 4.6.3 and 4.7.1</td><td>52 of 52 and 53 of 53</td></tr>
       <tr><td>Full regression of the planner on Sarus-2 4.7.1, every QuadPlane and Rover parameter written, read back and restored</td><td>This PC</td><td>16 of 16 steps</td></tr>
       <tr><td>Copter, Rover, QuadPlane alarm flight on Sarus-2 4.6.3</td><td>This PC</td><td>All passed</td></tr>
     </tbody>

@@ -198,8 +198,12 @@ static class Harness
                 {
                     port.setParam(sid, cid, name, orig, true);
                     double back = port.GetParam(sid, cid, name);
-                    restoredOk = Math.Abs((float)back - (float)orig) <= Math.Max(Math.Abs((float)orig), 1f) * 1e-6f;
-                    if (!restoredOk) note += $" restore read {back}";
+                    if (Math.Abs((float)back - (float)orig) > Math.Max(Math.Abs((float)orig), 1f) * 1e-6f)
+                        note += $" restore read {back} (firmware holds its own value)";
+                    // what the app shows must be what the aircraft holds
+                    double shown = mav.param.ContainsKey(name) ? mav.param[name].Value : double.NaN;
+                    restoredOk = Math.Abs((float)shown - (float)back) <= Math.Max(Math.Abs((float)back), 1f) * 1e-6f;
+                    if (!restoredOk) note += $" app shows {shown}";
                 }
                 catch (Exception ex) { note += " restore error: " + ex.Message; }
 
@@ -212,7 +216,7 @@ static class Harness
                     note = "firmware changed the value after acknowledging it; " + note;
                     reLimited++;
                 }
-                bool gcsDefect = note.Contains("error") || !restoredOk || !cacheOk;
+                bool gcsDefect = note.Contains("error") || !restoredOk;
                 if (gcsDefect) { gcsFail++; if (defects.Count < 10) defects.Add($"{name}: {note.Trim()}"); }
                 consecutiveErrors = note.Contains("error") ? consecutiveErrors + 1 : 0;
                 if (consecutiveErrors >= 3)

@@ -154,7 +154,7 @@
       <tr><td class="k">Usage statistics</td><td>On by default</td><td>Off by default (CONFIG → Planner can turn them on)</td></tr>
       <tr><td class="k">Firmware list</td><td>ArduPilot</td><td>ArduPilot plus Sarus builds</td></tr>
       <tr><td class="k">Altitude Angel</td><td>Plugin included; asks for a login and checks flights against its airspace data</td><td>Not included; Sarus places no airspace restrictions on a flight</td></tr>
-      <tr><td class="k">Firewall</td><td>Windows asks on every new type of network</td><td>The installer allows the program on all network types; removed on uninstall</td></tr>
+      <tr><td class="k">Firewall</td><td>Windows asks on every new type of network</td><td>The installer allows the program on private and domain networks only; public Wi-Fi stays closed; removed on uninstall</td></tr>
       <tr><td class="k">Web server commands</td><td>Any device on the network can send flight commands through port 56781</td><td>Flight commands only from this PC; telemetry viewing unchanged</td></tr>
       <tr><td class="k">Version</td><td>1.3.83</td><td>1.0.0; the file version stays 1.3.83 to show the Mission Planner base</td></tr>
     </tbody>
@@ -207,7 +207,7 @@
     <tbody>
       <tr><td class="k">Feature parity</td><td>Scan of every menu, screen, control and keyboard shortcut, compared with stock Mission Planner</td><td class="good">No differences besides 3 intended renames (1.0.0); 1.1.0 removes 2 suggestion features on request and adds 1 page</td></tr>
       <tr><td class="k">1.1.0 regression</td><td>Parameter editor, QuadPlane, Copter and Rover missions, limits and alarm flight, poor link, shortcuts and stress, every page, every QuadPlane and Rover parameter, on Sarus-2 4.7.1</td><td class="good">16 of 16 steps</td></tr>
-      <tr><td class="k">Parameter lock</td><td>Firmware tests on both lines (refusals, wrong keys, replays, other stations, arming, silence, reboot); the program against the real firmware</td><td class="good">35 of 35 per line; 18 of 18</td></tr>
+      <tr><td class="k">Parameter lock</td><td>Firmware tests on both lines (refusals, wrong keys, replays, other stations, arming, silence, reboot); the program against the real firmware</td><td class="good">65 of 65 per line; 53 of 53 and 52 of 52</td></tr>
       <tr><td class="k">In-flight alarm</td><td>QuadPlane mission, engine cut in cruise, on 4.7.1 and 4.6.3</td><td class="good">Silent through take-off; sounded after the cut; continue, no answer and hold all correct</td></tr>
       <tr><td class="k">Unit tests</td><td>Mission Planner's own test suite</td><td class="good">31 of 38, same as stock (7 known upstream failures)</td></tr>
       <tr><td class="k">QuadPlane flights</td><td>Connect, upload mission, arm, VTOL take-off, waypoints, VTOL landing; 42 checks per flight</td><td class="good">3 of 3 flights, 42 of 42 checks</td></tr>

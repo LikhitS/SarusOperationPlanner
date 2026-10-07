@@ -168,7 +168,7 @@
   <table>
     <thead><tr><th>Message</th><th>What to do</th></tr></thead>
     <tbody>
-      <tr><td class="k">Windows Security: allow network access</td><td>Not shown after a normal installation: the installer already allows the program on every network type, and removes that permission when you uninstall. If you run the portable copy, Windows asks once; tick both boxes and click <span class="ui">Allow</span>.</td></tr>
+      <tr><td class="k">Windows Security: allow network access</td><td>Not shown on home, office or other private networks: the installer allows the program on private and domain networks, and removes that permission when you uninstall. Public networks stay closed, so nobody on hotel or event Wi-Fi can reach it. If your telemetry runs over a network Windows calls public, open <span class="ui">Settings → Network &amp; internet</span> and set that network to <span class="ui">Private</span>. If you run the portable copy, Windows asks once; tick both boxes and click <span class="ui">Allow</span>.</td></tr>
       <tr><td class="k">Restart to enable a plugin (for example Drone ID)</td><td>Restart the program if you want the plugin, or disable it in <kbd>Ctrl</kbd>+<kbd>P</kbd> if you do not.</td></tr>
       <tr><td class="k">Other "show again?" messages</td><td>Informational. Tick "don't show again" if you prefer.</td></tr>
     </tbody>
@@ -418,24 +418,25 @@
   <table>
     <thead><tr><th>Needs the password</th><th>Stays open</th></tr></thead>
     <tbody>
-      <tr><td>Parameter writes from any page, loading a parameter file, Reset to Default, every calibration, reboot into the bootloader, firmware install, file writes over MAVFtp, receiver pairing, Lua scripting commands, MAVLink signing setup</td><td>Connecting, reading parameters, planning and uploading missions, arming, flying, mode changes, plain reboot, downloading logs</td></tr>
+      <tr><td>Parameter writes from any page, loading a parameter file, Reset to Default, every calibration (including those started as auxiliary functions, such as compass calibration, save trim and autotune), reboot into the bootloader, firmware install, file writes over MAVFtp, receiver pairing, Lua scripting commands, MAVLink signing setup, erasing logs, the serial passthrough used by the terminal and GPS tools, DroneCAN setup, the airframe limits and the alarm switch</td><td>Connecting, reading parameters, planning and uploading missions, arming, flying, mode changes, plain reboot, downloading logs</td></tr>
     </tbody>
   </table>
   <p>The lock has two halves. Sarus itself refuses the change until the password is given. On aircraft running Sarus firmware (Sarus-2 or later), the aircraft refuses it as well: after the password, Sarus unlocks each connected aircraft with a signed, one-time code before the change is sent. Another ground station, an older copy of Sarus or a home-made tool cannot change the aircraft's setup without the password, even if it skips the program's own check. The aircraft reports each refusal in <span class="ui">Messages</span> as "Sarus: locked, ... refused".</p>
   <table>
     <tbody>
       <tr><td class="k">Unlocking while armed</td><td>Refused by the aircraft. Unlock on the ground; an unlock made before take-off stays valid in the air, so you can tune in flight.</td></tr>
-      <tr><td class="k">Link lost</td><td>An aircraft locks itself again after 10 seconds without hearing the station that unlocked it, once disarmed. It never locks in flight. A reboot always locks it.</td></tr>
-      <tr><td class="k">Two stations</td><td>An unlock belongs to the station and radio link that made it. A second station, or the same station on a second radio, is still refused.</td></tr>
+      <tr><td class="k">Link lost</td><td>An aircraft locks itself again after 10 seconds without hearing the station that unlocked it, once disarmed. It never locks in flight. A reboot always locks it. While Sarus is unlocked it notices this and unlocks the aircraft again before your next change, so you do not have to.</td></tr>
+      <tr><td class="k">Two stations</td><td>An unlock belongs to the station and radio link that made it. A second station, or the same station on a second radio, is still refused. Without MAVLink signing the aircraft knows a station only by its link and system ID, so on a link others can reach (shared Wi-Fi, a relay) turn on MAVLink signing as well.</td></tr>
       <tr><td class="k">"Aircraft refused the unlock"</td><td>Its firmware was built with a different admin key. Changes to it will not take effect.</td></tr>
+      <tr><td class="k">Transmitter menus</td><td>Parameter menus on a FrSky or CRSF transmitter work only while a ground station holds an unlock.</td></tr>
       <tr><td class="k">Aircraft on ArduPilot firmware</td><td>Only the program's half of the lock applies. Install Sarus firmware to lock the aircraft itself.</td></tr>
       <tr><td class="k">Lost password</td><td>Nobody can recover it. The owner keeps a spare password in a safe place for that reason. Without either, aircraft need firmware with a new key.</td></tr>
     </tbody>
   </table>
-  <div class="callout warn"><strong class="t">What the lock cannot stop</strong><p>Someone with the flight controller on a bench can still flash other firmware through its USB bootloader. Protecting against that needs a secure bootloader, which is planned. Settings inside DroneCAN peripherals are not covered either.</p></div>
+  <div class="callout warn"><strong class="t">What the lock cannot stop</strong><p>Someone with the flight controller on a bench can still flash other firmware through its USB bootloader. Protecting against that needs a secure bootloader, which is planned. Starting DroneCAN setup from Sarus needs the password, but settings that other tools write into DroneCAN peripherals are not covered.</p></div>
 
   <h3>11.4 Airframe limits</h3>
-  <p><span class="ui">CONFIG → Airframe Limits</span> holds what this airframe can physically do. The page shows only the boxes that apply to the connected vehicle; leave a box empty to skip that check, and press <span class="ui">Save limits</span>. The limits are stored for this flight controller only, by its unique ID, under <code>Documents\Sarus Operation Planner\airframes</code>.</p>
+  <p><span class="ui">CONFIG → Airframe Limits</span> holds what this airframe can physically do. The page shows only the boxes that apply to the connected vehicle; leave a box empty to skip that check, and press <span class="ui">Save limits</span>. Saving asks for the Sarus admin password, because the limits and the alarm switch are the owner's settings. The limits are stored for this flight controller only, by its unique ID, under <code>Documents\Sarus Operation Planner\airframes</code>.</p>
   <table>
     <thead><tr><th>Vehicle</th><th>Limits you can enter</th></tr></thead>
     <tbody>
@@ -457,6 +458,7 @@
     </tbody>
   </table>
   <p>Defaults: altitude 15 m, airspeed 4 m/s, track 40 m, for 10 seconds. Take-off, landing and return legs are not judged, nor is airspeed before the aircraft is flying on its wings, because large differences there are normal. An error that is closing, such as a climb to a new altitude, does not raise the alarm. In the simulator, the alarm stayed silent through take-off, transition and climb, and sounded 11 seconds after the engine was cut in cruise.</p>
+  <p>The window names the aircraft, and your answer goes to that aircraft even if you select another one meanwhile. Only a mouse click answers it: Enter, Space or Escape pressed while you work elsewhere does nothing, and it cannot be closed without an answer. It opens over the Sarus window without taking the keyboard away from what you are doing, and stays on screen when Sarus is minimised. Hold and Return are confirmed by the aircraft; if it refuses (for example LOITER without a good GPS fix), a message says so and you should take control with the transmitter. If Sarus does not have the mission, it reads the current item from the aircraft first, so a landing is never judged as cruise.</p>
 
   <h3>11.6 Sarus firmware and its defaults</h3>
   <p>Sarus firmware comes in two lines with the same Sarus changes: one on ArduPilot 4.7.1, the newest stable release, and one on 4.6.3, the last release of the longer-proven 4.6 series. Install Firmware lists both and asks which to load. On CubeOrangePlus, the 4.6.3 line offers Plane and Rover; its Plane build leaves out Torqeedo boat motors and AIS ship receivers to make room for the lock. Copter for CubeOrangePlus comes from the 4.7.1 line. Firmware built with the owner's parameter set uses it as its defaults, so a new board, a parameter reset or a firmware install starts from the owner's values. Sensor calibrations are never part of that set; every aircraft still needs its own.</p>
