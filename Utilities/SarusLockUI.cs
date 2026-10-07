@@ -89,13 +89,26 @@ namespace MissionPlanner.Utilities
         // runs slow work (scrypt, aircraft handshakes) off the UI thread while the screens keep updating
         private static T Responsive<T>(Func<T> work)
         {
-            var t = Task.Run(work);
-            while (!t.IsCompleted)
+            // the screens keep painting, but nothing can be clicked until the work is done
+            var form = MainV2.instance;
+            var wasEnabled = form != null && form.Enabled;
+            if (form != null)
+                form.Enabled = false;
+            try
             {
-                Application.DoEvents();
-                Thread.Sleep(15);
+                var t = Task.Run(work);
+                while (!t.IsCompleted)
+                {
+                    Application.DoEvents();
+                    Thread.Sleep(15);
+                }
+                return t.Result;
             }
-            return t.Result;
+            finally
+            {
+                if (form != null && !form.IsDisposed)
+                    form.Enabled = wasEnabled;
+            }
         }
 
         private static bool Prompt(string what)
@@ -235,9 +248,12 @@ namespace MissionPlanner.Utilities
                 }
                 else
                 {
-                    // only an aircraft this station unlocked needs locking; ArduPilot without the lock has nothing to lock
+                    // only an aircraft this station unlocked needs locking; ArduPilot without the lock has nothing to
+                    // lock. If the status reply is lost, a Sarus aircraft (by its version) is locked anyway.
                     var flags = await port.SarusLockStatusAsync(sysid, compid).ConfigureAwait(false);
-                    if (flags == null || (flags.Value & SarusLock.FLAG_UNLOCKED_BY_YOU) == 0)
+                    if (flags != null && (flags.Value & SarusLock.FLAG_UNLOCKED_BY_YOU) == 0)
+                        return;
+                    if (flags == null && !(port.MAVlist[sysid, compid].VersionString ?? "").Contains("Sarus-"))
                         return;
                     var ok = await port.SarusLockLockAsync(sysid, compid).ConfigureAwait(false);
                     log.Info("Sarus lock: lock aircraft " + sysid + " -> " + ok);

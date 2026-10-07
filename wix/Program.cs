@@ -349,7 +349,7 @@ namespace wix
                     mainexeid = "_" + no;
 
                     sw.WriteLine(tabs3 + "<File Id=\"" + mainexeid + "\" Source=\"" + filepath + "\" ><netfx:NativeImage Id=\"ngen_MissionPlannerexe\"/>"
-                        // Sarus: allow the program on every network type, so Windows never asks (removed on uninstall). The name must
+                        // Sarus: allow the program on private and domain networks only (removed on uninstall). The names must
                         // differ from "Sarus Operation Planner", which Windows gives the rules it creates from its own prompts:
                         // WiX updates an existing rule of the same name instead of adding this one.
                         + "<fire:FirewallException Id=\"fw_SarusOperationPlanner\" Name=\"Sarus Operation Planner (private networks)\" Scope=\"any\" Profile=\"private\" IgnoreFailure=\"yes\" />"

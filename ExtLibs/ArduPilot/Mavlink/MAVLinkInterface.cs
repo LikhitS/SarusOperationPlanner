@@ -601,6 +601,7 @@ namespace MissionPlanner
         public void Close()
         {
             sarusConfirmed.Clear();
+            sarusUnanswered.Clear();
             try
             {
                 Terrain?.UnSub();
@@ -5077,7 +5078,7 @@ Sarus Operation Planner waits for 2 valid heartbeat packets before connecting
                         MAVlist[sysid, compid].cs.messages.Add((DateTime.Now, logdata));
 
                         // Sarus lock: the aircraft locked itself or refused a change; check again before the next one
-                        if (logdata.StartsWith("Sarus: ") && logdata.Contains("locked"))
+                        if (logdata.StartsWith("Sarus: ") && logdata.Contains("locked") && !logdata.Contains("unlocked"))
                             SarusForgetUnlock(sysid, compid);
 
                         // cap list at 1000 element
@@ -5331,9 +5332,11 @@ Sarus Operation Planner waits for 2 valid heartbeat packets before connecting
         {
             var nonceReply = await SarusLockRequestAsync(sysid, compid, SarusLock.OP_GET_NONCE, null, null)
                 .ConfigureAwait(false);
-            // ArduPilot without the Sarus lock answers with UNSUPPORTED, or not at all
-            if (nonceReply == null || nonceReply.Value.result != (byte) MAV_RESULT.ACCEPTED)
+            // null: no answer. ArduPilot without the Sarus lock answers with something other than ACCEPTED.
+            if (nonceReply == null)
                 return null;
+            if (nonceReply.Value.result != (byte) MAV_RESULT.ACCEPTED)
+                return MAV_RESULT.UNSUPPORTED;
             if ((nonceReply.Value.data[1] & SarusLock.FLAG_ACTIVE) == 0)
                 return MAV_RESULT.ACCEPTED;
             if ((nonceReply.Value.data[1] & SarusLock.FLAG_UNLOCKED_BY_YOU) != 0)
@@ -5365,6 +5368,10 @@ Sarus Operation Planner waits for 2 valid heartbeat packets before connecting
         private readonly ConcurrentDictionary<(uint, byte), DateTime> sarusConfirmed =
             new ConcurrentDictionary<(uint, byte), DateTime>();
 
+        // unanswered lock requests in a row, per aircraft; two mean its firmware does not answer them at all
+        private readonly ConcurrentDictionary<(uint, byte), int> sarusUnanswered =
+            new ConcurrentDictionary<(uint, byte), int>();
+
         /// <summary>
         /// Gate for a change to one aircraft: the app's admin password (SarusLock.AllowChange), then the aircraft's
         /// own lock. A Sarus aircraft locks itself again after a reboot, or after 10 s without traffic while
@@ -5384,8 +5391,8 @@ Sarus Operation Planner waits for 2 valid heartbeat packets before connecting
             MAV_RESULT? r;
             try
             {
-                // run off the caller's context so a call from the UI thread cannot deadlock on its own replies
-                r = Task.Run(() => SarusLockUnlockAsync(sysid, compid)).Result;
+                // AwaitSync runs it off the caller's context, so a call from the UI thread cannot deadlock on its replies
+                r = SarusLockUnlockAsync(sysid, compid).AwaitSync();
             }
             catch (Exception ex)
             {
@@ -5393,12 +5400,20 @@ Sarus Operation Planner waits for 2 valid heartbeat packets before connecting
                 return true; // the aircraft decides; a refusal comes back as its own message
             }
 
-            if (r == null)
-                sarusConfirmed[(sysid, compid)] = DateTime.MaxValue;
-            else if (r == MAV_RESULT.ACCEPTED)
-                sarusConfirmed[(sysid, compid)] = DateTime.UtcNow;
-            else
-                log.Warn("Sarus lock: aircraft " + sysid + " did not unlock before " + what + ": " + r);
+            var key = (sysid, compid);
+            if (r == MAV_RESULT.UNSUPPORTED || (r == null && sarusUnanswered.AddOrUpdate(key, 1, (k, n) => n + 1) >= 2))
+            {
+                sarusConfirmed[key] = DateTime.MaxValue; // no Sarus lock on this aircraft
+            }
+            else if (r != null)
+            {
+                // answered: checked for the next few seconds, whatever the answer (a refusal comes back from the
+                // aircraft as its own message), so a batch of changes does not ask again for each one
+                sarusUnanswered.TryRemove(key, out _);
+                sarusConfirmed[key] = DateTime.UtcNow;
+                if (r != MAV_RESULT.ACCEPTED)
+                    log.Warn("Sarus lock: aircraft " + sysid + " did not unlock before " + what + ": " + r);
+            }
             return true;
         }
 

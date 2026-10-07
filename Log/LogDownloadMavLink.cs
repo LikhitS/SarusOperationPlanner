@@ -454,6 +454,9 @@ namespace MissionPlanner.Log
             {
                 try
                 {
+                    // Sarus: erasing logs needs the admin password; refused means nothing was erased
+                    if (!MainV2.comPort.SarusAllowChange(MainV2.comPort.MAV.sysid, MainV2.comPort.MAV.compid, "log erase"))
+                        return;
                     MainV2.comPort.EraseLog();
                     AppendSerialLog(LogStrings.EraseComplete);
                     status = SerialStatus.Done;

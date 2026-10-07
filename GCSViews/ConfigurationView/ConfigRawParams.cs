@@ -391,6 +391,7 @@ namespace MissionPlanner.GCSViews.ConfigurationView
 
             // Sarus: values the aircraft did not keep as sent (clamped, rounded or rejected)
             var notKept = new List<string>();
+            var notWritten = new List<string>();
 
             foreach (string value in temp)
             {
@@ -406,7 +407,7 @@ namespace MissionPlanner.GCSViews.ConfigurationView
                     if (!MainV2.comPort.setParam(value, requested))
                     {
                         // refused (parameters locked) or not answered: the change stays pending and is reported
-                        notKept.Add(value + ": not written, the change was refused");
+                        notWritten.Add(value);
                         error++;
                         continue;
                     }
@@ -492,7 +493,9 @@ namespace MissionPlanner.GCSViews.ConfigurationView
                     "\n\nThe table now shows the aircraft's actual values (highlighted).", "Values changed by aircraft");
 
             if (error > 0)
-                CustomMessageBox.Show("Not all parameters successfully saved.", "Saved");
+                CustomMessageBox.Show("Not all parameters successfully saved." + (notWritten.Count > 0
+                    ? "\n\nNot written (refused, or no answer from the aircraft), still pending:\n" + string.Join("\n", notWritten)
+                    : ""), "Saved");
             else if (temp.Count>0)
                 CustomMessageBox.Show($"{temp.Count} parameters successfully saved.", "Saved");
             else
@@ -625,9 +628,6 @@ namespace MissionPlanner.GCSViews.ConfigurationView
                     if (Params[e.ColumnIndex, e.RowIndex].Value.ToString() == "0")
                         Params[e.ColumnIndex, e.RowIndex].Value = "-1";
                 }
-
-                double min = 0;
-                double max = 0;
 
                 var value = Params[e.ColumnIndex, e.RowIndex].Value.ToString();
                 value = value.Replace(',', '.');
@@ -1141,7 +1141,7 @@ namespace MissionPlanner.GCSViews.ConfigurationView
                 {
                     if (!MainV2.comPort.setParam(new[] { "FORMAT_VERSION", "SYSID_SW_MREV" }, 0))
                     {
-                        CustomMessageBox.Show("The reset was refused. Nothing was changed.", "Reset");
+                        CustomMessageBox.Show("The reset was not done (refused, or the aircraft has no such parameters). Nothing was changed.", "Reset");
                         return;
                     }
                     Thread.Sleep(1000);

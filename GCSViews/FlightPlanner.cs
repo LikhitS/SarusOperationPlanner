@@ -6295,31 +6295,32 @@ Column 1: Field type (RALLY is the only one at the moment -- may have RALLY_LAND
                 ((ProgressReporterDialogue) sender).UpdateProgressAndStatus(95, "Setting params");
 
                 // use brute force, for all three possible params
-                // Sarus: these are parameters, so the admin password applies; the mission itself is already written
+                // Sarus: these are parameters, so the admin password applies; the plan itself is already written
                 if (!port.SarusAllowChange(port.MAV.sysid, port.MAV.compid, "waypoint and loiter radius"))
                 {
                     MainV2.instance?.BeginInvoke((Action) (() => CustomMessageBox.Show(
-                        "The mission was written. The waypoint and loiter radius were not changed, because changing " +
-                        "parameters needs the Sarus admin password.", "Write mission")));
-                    return;
+                        "The plan was written. The waypoint and loiter radius were not changed, because changing " +
+                        "parameters needs the Sarus admin password.", "Write")));
                 }
-
-                // m
-                port.setParam("WP_RADIUS", float.Parse(TXT_WPRad.Text) / CurrentState.multiplierdist);
-
-                // m
-                port.setParam("WP_RADIUS_M", float.Parse(TXT_WPRad.Text) / CurrentState.multiplierdist);
-
-                // cm's
-                port.setParam("WPNAV_RADIUS", float.Parse(TXT_WPRad.Text) / CurrentState.multiplierdist * 100.0);
-
-                try
+                else
                 {
-                    port.setParam(new[] {"LOITER_RAD", "WP_LOITER_RAD"},
-                        float.Parse(TXT_loiterrad.Text) / CurrentState.multiplierdist);
-                }
-                catch
-                {
+                    // m
+                    port.setParam("WP_RADIUS", float.Parse(TXT_WPRad.Text) / CurrentState.multiplierdist);
+
+                    // m
+                    port.setParam("WP_RADIUS_M", float.Parse(TXT_WPRad.Text) / CurrentState.multiplierdist);
+
+                    // cm's
+                    port.setParam("WPNAV_RADIUS", float.Parse(TXT_WPRad.Text) / CurrentState.multiplierdist * 100.0);
+
+                    try
+                    {
+                        port.setParam(new[] {"LOITER_RAD", "WP_LOITER_RAD"},
+                            float.Parse(TXT_loiterrad.Text) / CurrentState.multiplierdist);
+                    }
+                    catch
+                    {
+                    }
                 }
 
                 commandlist?.ForEach(pnt =>
