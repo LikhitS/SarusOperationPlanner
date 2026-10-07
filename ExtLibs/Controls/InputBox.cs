@@ -148,7 +148,9 @@ namespace MissionPlanner.Controls
             form.ClientSize = new Size(396, 107);
             form.Controls.AddRange(new Control[] { label, textBox, buttonOk, buttonCancel });
             form.FormBorderStyle = FormBorderStyle.FixedSingle;
-            form.StartPosition = FormStartPosition.CenterScreen;
+            // over the app's window, on whichever monitor it is
+            var owner = Application.OpenForms.Count > 0 ? Application.OpenForms[0] : null;
+            form.StartPosition = owner != null ? FormStartPosition.CenterParent : FormStartPosition.CenterScreen;
             form.MinimizeBox = false;
             form.MaximizeBox = false;
             form.AcceptButton = buttonOk;
@@ -172,7 +174,7 @@ namespace MissionPlanner.Controls
 
             Console.WriteLine("Input Box " + System.Threading.Thread.CurrentThread.Name);
 
-            form.ShowDialog();
+            form.ShowDialog(owner);
 
             Console.WriteLine("Input Box 2 " + System.Threading.Thread.CurrentThread.Name);
 

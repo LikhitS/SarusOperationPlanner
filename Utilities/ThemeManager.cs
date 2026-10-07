@@ -1219,7 +1219,8 @@ mc:Ignorable=""d""
                 }
                 else if (ctl.GetType() == typeof(Button))
                 {
-                    ctl.ForeColor = Color.Black;
+                    // black as upstream, unless the theme's button face is too dark for it (Sarus Glass)
+                    ctl.ForeColor = Contrast(Color.Black, ButBG) >= 4.5 ? Color.Black : ButtonTextColor;
                     ctl.BackColor = ButBG;
                 }
                 else if (ctl is MyButton but)

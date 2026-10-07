@@ -432,15 +432,17 @@ static class Harness
             }
             return null;
         }
+        bool printed;
         using (var bmp = new System.Drawing.Bitmap(mf.Width, mf.Height))
         using (var g = System.Drawing.Graphics.FromImage(bmp))
         {
             var dc = g.GetHdc();
-            PrintWindow(mf.Handle, dc, 2);
+            printed = PrintWindow(mf.Handle, dc, 2);
             g.ReleaseHdc(dc);
             bmp.Save(file);
         }
-        return $"app was not the foreground window; on top: \"{title}\"";
+        // the app's own window rendered by PrintWindow is a true picture of it, whatever else is in front
+        return printed ? null : $"app was not the foreground window and could not be captured; on top: \"{title}\"";
     }
 
     static IEnumerable<System.Windows.Forms.Control> AllControls(System.Windows.Forms.Control c)

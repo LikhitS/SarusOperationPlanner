@@ -982,6 +982,10 @@ Sarus Operation Planner waits for 2 valid heartbeat packets before connecting
                 Assembly entryAssembly = Assembly.GetEntryAssembly();
                 if (entryAssembly != null)
                 {
+                    // Sarus: the product version (1.1.0); the file version is the Mission Planner base (1.3.83)
+                    var info = entryAssembly.GetCustomAttributes(typeof(AssemblyInformationalVersionAttribute), false);
+                    if (info.Length != 0)
+                        return ((AssemblyInformationalVersionAttribute) info[0]).InformationalVersion;
                     object[] customAttributes =
                         entryAssembly.GetCustomAttributes(typeof(AssemblyFileVersionAttribute), false);
                     if (customAttributes != null && customAttributes.Length != 0)
