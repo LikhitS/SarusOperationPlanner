@@ -801,7 +801,7 @@ namespace MissionPlanner
                         if (hbseen)
                         {
                             PRsender.doWorkArgs.ErrorMessage = Strings.Only1Hb;
-                            throw new Exception(Strings.Only1HbD + plaintxtlinebuffer.Aggregate((a, b) => a + "\r\n" + b));
+                            throw new Exception(Strings.Only1HbD + string.Join("\r\n", plaintxtlinebuffer));
                         }
                         else
                         {
@@ -810,7 +810,7 @@ namespace MissionPlanner
 
 No Mavlink Heartbeat Packets where read from this port - Verify Baud Rate and setup
 Sarus Operation Planner waits for 2 valid heartbeat packets before connecting
-" + plaintxtlinebuffer.Aggregate((a, b) => a + "\r\n" + b));
+" + string.Join("\r\n", plaintxtlinebuffer));
                         }
                     }
 
