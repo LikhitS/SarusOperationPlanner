@@ -1,9 +1,9 @@
-# Long soak flight only (appends to the overnight summary).
+# Long soak flight only (appends to overnight-summary.txt).
 param([int]$Minutes = 240)
 $root = "C:\dev\Sarus"
 $log = "$root\tests\overnight-summary.txt"
 $rep = "$root\tests\report-soak-quadplane.txt"
-# progress.ps1 measures soak time from the report's creation time: start from a new file
+# soak time is measured from the report's creation time: start from a new file
 if (Test-Path -LiteralPath $rep) { [IO.File]::Delete($rep) }
 "Soak (restarted with mission restart fix) $(Get-Date)" | Add-Content $log
 $env:SARUS_SOAK_MINUTES = "$Minutes"
